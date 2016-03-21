@@ -1,0 +1,63 @@
+OASISFormat:    0.4
+Name:           lean
+Version:        0.0.1
+Synopsis:       OCaml bindings for the Lean prover
+Authors:        Benedikt Schmidt <beschmi@gmail.com>
+License:        Apache
+Plugins:        DevFiles (0.4), META (0.4)
+BuildTools:     ocamlbuild
+
+Library lean
+  Path:             lib
+  FindlibName:      lean
+  Modules:          Lean
+  InternalModules:  Ffi_generated, Ffi_generated_types
+  CSources:         ffi_generated_stubs.c
+  CCOpt:            -I $pkg_ctypes_stubs
+  CCLib:            -lleanshared
+  ByteOpt:          -warn-error +1..45
+  NativeOpt:        -warn-error +1..45
+  BuildDepends:     lean_bindings
+
+Library lean_bindings
+  Install:          true
+  Path:             bindings
+  Modules:          Ffi_bindings
+  ByteOpt:          -warn-error +1..45
+  NativeOpt:        -warn-error +1..45
+  BuildDepends:     ctypes, ctypes.stubs, ctypes.foreign
+
+Executable ffi_stubgen
+  Install:        false
+  Path:           stubgen
+  MainIs:         ffi_stubgen.ml
+  ByteOpt:        -warn-error +1..45
+  NativeOpt:      -warn-error +1..45
+  BuildDepends:   lean_bindings
+
+Executable ffi_types_stubgen
+  Install:        false
+  Path:           stubgen
+  MainIs:         ffi_types_stubgen.ml
+  ByteOpt:        -warn-error +1..45
+  NativeOpt:      -warn-error +1..45
+  BuildDepends:   lean_bindings
+
+Executable test_lean
+  Install:        false
+  Path:           lib_test
+  MainIs:         test_lean.ml
+  CompiledObject: best
+  ByteOpt:        -warn-error +1..45
+  NativeOpt:      -warn-error +1..45
+  BuildDepends:   lean, oUnit
+
+Test test_lean
+  Command: $test_lean -runner sequential
+
+#Document lean
+#  Type:                 ocamlbuild (0.4)
+#  BuildTools:           ocamldoc
+#  Title:                API reference for Lean
+#  XOCamlBuildPath:      .
+#  XOCamlBuildLibraries: lean
