@@ -25,21 +25,23 @@ module Bindings (F : Cstubs.FOREIGN) = struct
   let lean_bool = int
 (* * Lean string *)
   module Lean_string =
-  struct
+    struct
+      (* FIXME : where are pointers here ? -> lean_string_del type *)
     let t : string option Ctypes.typ = string_opt
     type t = string option
 
     let const_t : t Ctypes.typ = typedef string_opt "const char*"
     (* Potential FIXME : remember we can set an actual ~finalise:(fun ...) arg *)
-    let allocate () : t ptr = allocate_n ?finalise:None t ~count:(sizeof (ptr char))
+    let allocate fin () =
+      allocate_n ~finalise:fin t ~count:(sizeof (ptr char))
                                           
   end
 
   let lean_string = Lean_string.t
   let lean_string_const = Lean_string.const_t
-  let lean_string_allocate = Lean_string.allocate
   let lean_string_del =
     foreign "lean_string_del" (lean_string @-> returning void)
+  let lean_string_allocate = Lean_string.allocate (fun p -> ignore(!@ p)) (* FIXME ! *)
 
 (* * Structures by name *)         
   module New_lean_typedef (Id : sig val id : string end) : sig
