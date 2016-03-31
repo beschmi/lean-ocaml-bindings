@@ -30,13 +30,9 @@ module Bindings (F : Cstubs.FOREIGN) = struct
     type t = string option
 
     let const_t : t Ctypes.typ = typedef string_opt "const char*"
-    let allocate () : t ptr = allocate_n t (sizeof (ptr char))
-                                         
-    (*
-    type t = string option
-    let t : string option Ctypes.typ = string_opt
-    let const_t : string option Ctypes.typ = typedef string_opt "const char*"
-    let allocate : unit -> t ptr = fun () -> allocate_n t (sizeof (ptr char))*)    
+    (* Potential FIXME : remember we can set an actual ~finalise:(fun ...) arg *)
+    let allocate () : t ptr = allocate_n ?finalise:None t ~count:(sizeof (ptr char))
+                                          
   end
 
   let lean_string = Lean_string.t
@@ -46,18 +42,20 @@ module Bindings (F : Cstubs.FOREIGN) = struct
     foreign "lean_string_del" (lean_string @-> returning void)
 
 (* * Structures by name *)         
-  module New_lean_struct (Id : sig val id : string end) : sig
+  module New_lean_typedef (Id : sig val id : string end) : sig
     type t
     val ct : t Ctypes.typ
     val allocate : unit -> t ptr                             
   end = struct
     type t = unit ptr
     let ct : t Ctypes.typ = typedef (ptr void) Id.id
-    let allocate () = allocate_n ct (sizeof ct)
+                                    
+    (* Potential FIXME : remember we can set an actual ~finalise:(fun ...) arg *)
+    let allocate () = allocate_n ?finalise:None ct ~count:(sizeof ct)
   end
                                                             
 (* * Lean exceptions *)
-  module Lean_exception = New_lean_struct(struct let id = "lean_exception" end)
+  module Lean_exception = New_lean_typedef(struct let id = "lean_exception" end)
                                          
   (* FIXME: use Types.TYPE.enum instead to deal with lean_exception_kind<>int *)  
   let lean_exception_kind = int
@@ -73,7 +71,7 @@ module Bindings (F : Cstubs.FOREIGN) = struct
     foreign "lean_exception_get_kind" (lean_exception @-> returning lean_exception_kind)
 
 (* * Lean names *)
-  module Lean_name = New_lean_struct (struct let id = "lean_name" end)
+  module Lean_name = New_lean_typedef (struct let id = "lean_name" end)
                                      
   let lean_name = Lean_name.ct
   let lean_name_allocate = Lean_name.allocate
@@ -135,19 +133,9 @@ module Bindings (F : Cstubs.FOREIGN) = struct
 
 (* * Lean list name *)
 (* ** Module abstraction *)
-  module Lean_list_name : sig
-    type t
-    val t : t Ctypes.typ
-    val allocate : unit -> t ptr
-  end =
-  struct
-    type t = unit structure ptr
-    let struc = structure "_lean_list_name"
-    let  t : (unit structure ptr) Ctypes.typ = ptr struc
-    let allocate : unit -> t ptr = fun () -> allocate_n t (sizeof (ptr void))
-  end
-
-  let lean_list_name = Lean_list_name.t
+  module Lean_list_name = New_lean_typedef(struct let id = "lean_list_name" end)
+                                          
+  let lean_list_name = Lean_list_name.ct
   let lean_list_name_allocate = Lean_list_name.allocate
 
 (* ** Creation and deletion *)
@@ -178,3 +166,5 @@ module Bindings (F : Cstubs.FOREIGN) = struct
       (lean_list_name @-> ptr lean_list_name @-> ptr lean_exception @-> returning lean_bool)
 
 end
+
+
