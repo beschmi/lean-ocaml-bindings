@@ -75,7 +75,7 @@ module Bindings (F : Cstubs.FOREIGN) = struct
 (* * Lean names *)
   module Lean_name = New_lean_struct (struct let id = "lean_name" end)
                                      
-  let lean_name = Lean_name.t
+  let lean_name = Lean_name.ct
   let lean_name_allocate = Lean_name.allocate
 
 (* ** Creation and deletion *)
