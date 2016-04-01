@@ -51,6 +51,8 @@ let conv_bool lb =
 
 (* ** creation and deletion *)
 let name_del n = B.lean_name_del n
+
+let exception_destructor = B.lean_exception_destructor
                                  
 let name_mk_anonymous () =
   let n_p = B.lean_name_allocate () in
