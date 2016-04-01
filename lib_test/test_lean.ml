@@ -51,8 +51,7 @@ let t_name_idx =
   let ni3 = name_mk_idx ns 5 in
   assert_bool ""  (name_eq ni ni2);
   assert_bool ""  (not (name_eq ni ni3));
-  assert_equal (name_to_string ni) "foo.7";
-  let _ = exception_destructor () in ()
+  assert_equal (name_to_string ni) "foo.7"
 
 let _ =
   let suite = "lean" >::: [

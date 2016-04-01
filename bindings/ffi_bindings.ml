@@ -24,21 +24,31 @@ module Bindings (F : Cstubs.FOREIGN) = struct
 (* * Lean bool *)
   let lean_bool = int
 (* * Lean string *)
-  module Lean_string = struct
+  module Lean_string : sig
+    type t
+    val t : t Ctypes.typ
+    val const_t : t Ctypes.typ
+                    
+    val allocate : ?finalise:(t Ctypes.ptr -> unit) -> unit -> t ptr
+
+    val to_string : t -> string option
+    val mk : string option -> t
+  end = struct
     type t = string option
-    let t : t Ctypes.typ = string_opt
-    let const_t : t Ctypes.typ = typedef string_opt "const char*" (* char const * ? *)
-    
+    let t = string_opt
+    let const_t = typedef string_opt "const char*" (* char const * ? *)
     
     let allocate ?finalise () =
       allocate_n ?finalise t ~count:(sizeof (ptr char))
+                 
+    let id x = x
+    let to_string = id and mk = id
   end
 
   let lean_string = Lean_string.t
   let lean_string_const = Lean_string.const_t
   let lean_string_del =
     foreign "lean_string_del" (lean_string @-> returning void)
-  let lean_string_allocate = Lean_string.allocate ~finalise:(fun p -> ignore !@ p) (* FIXME ! *)
 
 (* * Structures by name *)         
   module New_lean_typedef (Id : sig val id : string end) : sig
@@ -49,7 +59,6 @@ module Bindings (F : Cstubs.FOREIGN) = struct
     type t = unit ptr
     let t : t Ctypes.typ = typedef (ptr void) Id.id
                                     
-    (* Potential FIXME : remember we can set an actual ~finalise:(fun ...) arg *)
     let allocate ?finalise () = allocate_n ?finalise t ~count:(sizeof t)
   end
                                                             
@@ -61,9 +70,6 @@ module Bindings (F : Cstubs.FOREIGN) = struct
   let lean_exception = Lean_exception.t
   let lean_exception_del =
     foreign "lean_exception_del" (lean_exception @-> returning void)
-  let lean_exception_destructor () =
-    Foreign.foreign "lean_exception_del" (lean_exception @-> returning void)
-  let lean_exception_allocate = Lean_exception.allocate ~finalise:(fun p -> lean_exception_destructor () !@ p)
   let lean_exception_get_message =
     foreign "lean_exception_get_message" (lean_exception @-> returning lean_string_const)
   let lean_exception_get_detailed_message =
@@ -75,7 +81,6 @@ module Bindings (F : Cstubs.FOREIGN) = struct
   module Lean_name = New_lean_typedef (struct let id = "lean_name" end)
                                      
   let lean_name = Lean_name.t
-  let lean_name_allocate = Lean_name.allocate
 
 (* ** Creation and deletion *)
   let lean_name_del =

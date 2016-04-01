@@ -20,6 +20,9 @@ type exc =
 
 exception Lean_exception of exc * string
 
+let _as_str = B.Lean_string.to_string
+let _mk_some s = B.Lean_string.mk (Some s)
+                                 
 let conv_exc c =
   T.Lean_exception_kind.(
     if      c = lean_null_exception    then Null_Exception
@@ -34,7 +37,7 @@ let conv_exc c =
     else assert false)
 
 let raise_exception ?(del=true) ex =
-  match B.lean_exception_get_detailed_message ex with
+  match _as_str(B.lean_exception_get_detailed_message ex) with
   | None   -> assert false
   | Some s ->
      let exc = conv_exc (B.lean_exception_get_kind ex) in
@@ -47,23 +50,31 @@ let conv_bool lb =
     else if lb = lean_false then false
     else failwith "Unexpected Lean_bool : not lean_true nor lean_false")
 
+(* * Allocators (private) *)
+let _lean_string_allocate =
+  B.Lean_string.allocate ~finalise:(fun p -> B.lean_string_del !@ p)
+
+                         
+let _lean_exception_allocate =
+  B.Lean_exception.allocate ~finalise:(fun p -> B.lean_exception_del !@ p)
+
+let _lean_name_allocate =
+  B.Lean_name.allocate ~finalise:(fun p -> B.lean_name_del !@ p)
+
+                       
 (* * Lean_name *)
 
 (* ** creation and deletion *)
-let name_del n = B.lean_name_del n
-
-let exception_destructor = B.lean_exception_destructor
-                                 
 let name_mk_anonymous () =
-  let n_p = B.lean_name_allocate () in
-  let e_p = B.lean_exception_allocate () in
+  let n_p = _lean_name_allocate () in
+  let e_p = _lean_exception_allocate () in
   let lb = conv_bool (B.lean_name_mk_anonymous n_p e_p) in
   if lb then !@ n_p else raise_exception (!@ e_p)
       
 let name_mk_str n (str : string) =
-  let n_p = B.lean_name_allocate () in
-  let e_p = B.lean_exception_allocate () in
-  let lb = conv_bool (B.lean_name_mk_str n (Some str) n_p e_p) in
+  let n_p = _lean_name_allocate () in
+  let e_p = _lean_exception_allocate () in
+  let lb = conv_bool (B.lean_name_mk_str n  (_mk_some str) n_p e_p) in
   if lb then !@n_p else raise_exception (!@ e_p)
 
 let name_mk_str_of_ano : string -> B.Lean_name.t = 
@@ -71,14 +82,15 @@ let name_mk_str_of_ano : string -> B.Lean_name.t =
 
 let name_mk_idx n (idx : int) =
   let idx = Unsigned.UInt.of_int idx in
-  let n_p = B.lean_name_allocate () in
-  let e_p = B.lean_exception_allocate () in
+  let n_p = _lean_name_allocate () in
+  let e_p = _lean_exception_allocate () in
   let lb = conv_bool (B.lean_name_mk_idx n idx n_p e_p) in
   if lb then !@n_p else raise_exception (!@ e_p)
 
 let name_mk_idx_of_ano : int -> B.Lean_name.t =
   name_mk_idx (name_mk_anonymous ())
 
+let name_del n = B.lean_name_del n
 
 (* ** indicator and comparison *)
 
@@ -94,25 +106,25 @@ let name_quick_lt n1 n2 = conv_bool (B.lean_name_quick_lt n1 n2)
 
 let name_get_idx n =
   let i_p = allocate uint (Unsigned.UInt.of_int 0) in
-  let e_p = B.lean_exception_allocate () in
+  let e_p = _lean_exception_allocate () in
   let lb = conv_bool (B.lean_name_get_idx n i_p e_p) in
   if lb then Unsigned.UInt.to_int (!@ i_p)
   else raise_exception (!@ e_p)
 
 let name_get_str n =
-  let s_p = B.lean_string_allocate () in
-  let e_p = B.lean_exception_allocate () in
+  let s_p = _lean_string_allocate () in
+  let e_p = _lean_exception_allocate () in
   let lb = conv_bool (B.lean_name_get_str n s_p e_p) in
   if lb then
-    match !@ s_p with Some s -> s | None -> assert false
+    match _as_str (!@ s_p) with Some s -> s | None -> assert false
   else raise_exception (!@ e_p)
 
 let name_to_string n =
-  let s_p = B.lean_string_allocate () in
-  let e_p = B.lean_exception_allocate () in
+  let s_p = _lean_string_allocate () in
+  let e_p = _lean_exception_allocate () in
   let lb = conv_bool (B.lean_name_to_string n s_p e_p) in
   if lb then
-    match !@ s_p with Some s -> s | None -> assert false
+    match _as_str !@ s_p with Some s -> s | None -> assert false
   else raise_exception (!@ e_p)
 
 (* * Lean_list_name *)
