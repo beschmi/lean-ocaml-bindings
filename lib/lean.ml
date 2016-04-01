@@ -33,7 +33,7 @@ let conv_exc c =
     else if c = lean_other_exception   then Other_Exception
     else assert false)
 
-let raise_exception ?del:(del=true) ex =
+let raise_exception ?(del=true) ex =
   match B.lean_exception_get_detailed_message ex with
   | None   -> assert false
   | Some s ->

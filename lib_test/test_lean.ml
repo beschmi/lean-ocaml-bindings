@@ -60,4 +60,7 @@ let _ =
         t_name_idx
       ]
   in
-  OUnit2.run_test_tt_main @@ ounit2_of_ounit1 suite
+  (* print_string "Starting testing"; *)
+  OUnit2.run_test_tt_main @@ ounit2_of_ounit1 suite(*; 
+  print_string "Test ended without exceptions"; print_newline(); *)
+                                              
