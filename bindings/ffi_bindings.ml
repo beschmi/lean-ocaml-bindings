@@ -62,12 +62,14 @@ module Bindings (F : Cstubs.FOREIGN) = struct
   module Lean_list_name = Lean_Typedef(struct let type_name = "lean_list_name" end)
   module Lean_univ      = Lean_Typedef(struct let type_name = "lean_univ"      end)
   module Lean_list_univ = Lean_Typedef(struct let type_name = "lean_list_univ" end)
+  module Lean_options   = Lean_Typedef(struct let type_name = "lean_options"   end)
 
   let lean_exception_allocate = Lean_exception.allocate
   let lean_name_allocate      = Lean_name.allocate
   let lean_name_list_allocate = Lean_list_name.allocate
   let lean_univ_allocate      = Lean_univ.allocate
   let lean_list_univ_allocate = Lean_list_univ.allocate
+  let lean_options            = Lean_options.allocate
 
 (* ** Lean strings (strings returned by lean) *)
 
@@ -184,6 +186,72 @@ module Bindings (F : Cstubs.FOREIGN) = struct
     foreign "lean_list_name_tail"
       (lean_list_name @-> ptr lean_list_name @-> ptr lean_exception @-> returning lean_bool)
 
+(* ** Lean options *)
+  let lean_options = Lean_options.t
+
+  let lean_options_mk_empty =
+    foreign "lean_options_mk_empty" (ptr lean_options @-> ptr lean_exception @-> returning lean_bool)
+
+  let lean_options_set_bool =
+    foreign "lean_options_set_bool" (lean_options @-> lean_name @-> lean_bool
+      @-> ptr lean_options @-> ptr lean_exception @-> returning lean_bool)
+
+  let lean_options_set_int =
+    foreign "lean_options_set_int" (lean_options @-> lean_name @-> int
+      @-> ptr lean_options @-> ptr lean_exception @-> returning lean_bool)
+
+  let lean_options_set_unsigned =
+    foreign "lean_options_set_unsigned" (lean_options @-> lean_name @-> uint
+      @-> ptr lean_options @-> ptr lean_exception @-> returning lean_bool)
+
+  let lean_options_set_double =
+    foreign "lean_options_set_double" (lean_options @-> lean_name @-> double
+      @-> ptr lean_options @-> ptr lean_exception @-> returning lean_bool)
+
+  let lean_options_set_string =
+    foreign "lean_options_set_string" (lean_options @-> lean_name @-> string
+      @-> ptr lean_options @-> ptr lean_exception @-> returning lean_bool)
+
+  let lean_options_join =
+    foreign "lean_options_join" (lean_options @-> lean_options
+      @-> ptr lean_options @-> ptr lean_exception @-> returning lean_bool)
+
+  let lean_options_del =
+    foreign "lean_options_del" (lean_options @-> returning void)
+
+  let lean_options_to_string =
+    foreign "lean_options_to_string"
+      (lean_options @-> ptr lean_string @-> ptr lean_exception @-> returning lean_bool)
+
+  let lean_options_eq =
+    foreign "lean_options_eq" (lean_options @-> lean_options @-> returning lean_bool)
+  
+  let lean_options_empty =
+    foreign "lean_options_empty" (lean_options @-> returning lean_bool)
+
+  let lean_options_contains =
+    foreign "lean_options_contains" (lean_options @-> lean_name @-> returning lean_bool)
+  
+  let lean_options_get_bool =
+    foreign "lean_options_get_bool" (lean_options @-> lean_name
+      @-> ptr lean_bool @-> ptr lean_exception @-> returning lean_bool)
+
+  let lean_options_get_int =
+    foreign "lean_options_get_int" (lean_options @-> lean_name
+      @-> ptr int @-> ptr lean_exception @-> returning lean_bool)
+
+  let lean_options_get_unsigned =
+    foreign "lean_options_get_unsigned" (lean_options @-> lean_name
+      @-> ptr uint @-> ptr lean_exception @-> returning lean_bool)
+
+  let lean_options_get_double =
+    foreign "lean_options_get_double" (lean_options @-> lean_name
+      @-> ptr double @-> ptr lean_exception @-> returning lean_bool)
+
+  let lean_options_get_string =
+    foreign "lean_options_get_string" (lean_options @-> lean_name
+      @-> ptr lean_string @-> ptr lean_exception @-> returning lean_bool)
+
 (* ** Lean universe *)
   
   (* FIXME: use Types.TYPE.enum instead to deal with lean_univ_kind<>int *)
@@ -192,8 +260,6 @@ module Bindings (F : Cstubs.FOREIGN) = struct
   let lean_univ = Lean_univ.t
 
   let lean_univ_allocate = Lean_univ.allocate
-
-(* ** Creation and deletion *)
 
   let lean_univ_mk_zero =
     foreign "lean_univ_mk_zero" (ptr lean_univ @-> ptr lean_exception @-> returning lean_bool)
@@ -225,12 +291,10 @@ module Bindings (F : Cstubs.FOREIGN) = struct
   let lean_univ_to_string =
     foreign "lean_univ_to_string"
       (lean_univ @-> ptr lean_string @-> ptr lean_exception @-> returning lean_bool)
-                             
-(* FIXME: bind options
-/** \brief Similar to \c lean_univ_to_string, but uses pretty printing options in \c o,
-    when converting objection into a string. */
-lean_bool lean_univ_to_string_using(lean_univ u, lean_options o, char const ** r, lean_exception * ex);
- *)
+
+  let lean_univ_to_string_using =
+    foreign "lean_univ_to_string_using"
+      (lean_univ @-> lean_options @-> ptr lean_string @-> ptr lean_exception @-> returning lean_bool)
 
   let lean_univ_del =
     foreign "lean_univ_del" (lean_univ @-> returning void)
