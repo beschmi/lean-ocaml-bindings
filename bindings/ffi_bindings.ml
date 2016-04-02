@@ -1,11 +1,15 @@
 open Ctypes
 
+(* * Types module *)
+
 module Types (F: Cstubs.Types.TYPE) = struct
   open F
+
   module Lean_bool = struct
     let lean_true  = constant "lean_true" int
     let lean_false = constant "lean_false" int
   end
+
   module Lean_exception_kind = struct
     let lean_null_exception    = constant "LEAN_NULL_EXCEPTION"    int
     let lean_system_exception  = constant "LEAN_SYSTEM_EXCEPTION"  int
@@ -17,72 +21,87 @@ module Types (F: Cstubs.Types.TYPE) = struct
     let lean_parser_exception  = constant "LEAN_PARSER_EXCEPTION"  int
     let lean_other_exception   = constant "LEAN_OTHER_EXCEPTION"   int
   end
+
+  module Lean_univ_kind = struct
+    let lean_univ_zero   = constant "LEAN_UNIV_ZERO" int
+    let lean_univ_succ   = constant "LEAN_UNIV_SUCC" int
+    let lean_univ_max    = constant "LEAN_UNIV_MAX" int
+    let lean_univ_imax   = constant "LEAN_UNIV_IMAX" int
+    let lean_univ_param  = constant "LEAN_UNIV_PARAM" int
+    let lean_univ_global = constant "LEAN_UNIV_GLOBAL" int
+    let lean_univ_meta   = constant "LEAN_UNIV_META" int
+  end
+
 end
+
+(* * Bindings module *)
 
 module Bindings (F : Cstubs.FOREIGN) = struct
   open F
-(* * Lean bool *)
-  let lean_bool = int
-(* * Lean string *)
-  module Lean_string : sig
+
+(* ** Typedefs *)
+
+  module Lean_Typedef (TN : sig val type_name : string end) : sig
     type t
     val t : t Ctypes.typ
-    val const_t : t Ctypes.typ
-                    
-    val allocate : ?finalise:(t Ctypes.ptr -> unit) -> unit -> t ptr
-
-    val to_string : t -> string option
-    val mk : string option -> t
-  end = struct
-    type t = string option
-    let t = string_opt
-    let const_t = typedef string_opt "const char*" (* char const * ? *)
-    
-    let allocate ?finalise () =
-      allocate_n ?finalise t ~count:(sizeof (ptr char))
-                 
-    let id x = x
-    let to_string = id and mk = id
-  end
-
-  let lean_string = Lean_string.t
-  let lean_string_const = Lean_string.const_t
-  let lean_string_del =
-    foreign "lean_string_del" (lean_string @-> returning void)
-
-(* * Structures by name *)         
-  module New_lean_typedef (Id : sig val id : string end) : sig
-    type t
-    val t : t Ctypes.typ
-    val allocate : ?finalise:(t Ctypes.ptr -> unit) -> unit -> t ptr                             
+    val allocate : ?finalise:(t -> unit) -> unit -> t ptr
   end = struct
     type t = unit ptr
-    let t : t Ctypes.typ = typedef (ptr void) Id.id
-                                    
-    let allocate ?finalise () = allocate_n ?finalise t ~count:(sizeof t)
+    let t = typedef (ptr void) TN.type_name
+    
+    let allocate ?finalise () =
+      let finalise = match finalise with
+        | Some f -> Some (fun p -> f !@p)
+        | None   -> None
+      in
+      allocate ?finalise t null
   end
-                                                            
-(* * Lean exceptions *)
-  module Lean_exception = New_lean_typedef(struct let id = "lean_exception" end)
+  
+  module Lean_exception = Lean_Typedef(struct let type_name = "lean_exception" end)
+  module Lean_name      = Lean_Typedef(struct let type_name = "lean_name"      end)
+  module Lean_list_name = Lean_Typedef(struct let type_name = "lean_list_name" end)
+  module Lean_univ      = Lean_Typedef(struct let type_name = "lean_univ"      end)
+  module Lean_list_univ = Lean_Typedef(struct let type_name = "lean_list_univ" end)
+
+  let lean_exception_allocate = Lean_exception.allocate
+  let lean_name_allocate      = Lean_name.allocate
+  let lean_name_list_allocate = Lean_list_name.allocate
+  let lean_univ_allocate      = Lean_univ.allocate
+  let lean_list_univ_allocate = Lean_list_univ.allocate
+
+(* ** Lean strings (strings returned by lean) *)
+
+  let lean_bool = int
+
+  let lean_string = typedef (ptr char) "const char*"
+  
+  let lean_string_del = foreign "lean_string_del" (lean_string @-> returning void)
+
+  let lean_string_allocate () = allocate lean_string (from_voidp char null)
+
+(* ** Lean exceptions *)
                                          
   (* FIXME: use Types.TYPE.enum instead to deal with lean_exception_kind<>int *)  
   let lean_exception_kind = int
+
   let lean_exception = Lean_exception.t
+
   let lean_exception_del =
     foreign "lean_exception_del" (lean_exception @-> returning void)
+
   let lean_exception_get_message =
-    foreign "lean_exception_get_message" (lean_exception @-> returning lean_string_const)
+    foreign "lean_exception_get_message" (lean_exception @-> returning lean_string)
+
   let lean_exception_get_detailed_message =
-    foreign "lean_exception_get_detailed_message" (lean_exception @-> returning lean_string_const)
+    foreign "lean_exception_get_detailed_message" (lean_exception @-> returning lean_string)
+
   let lean_exception_get_kind =
     foreign "lean_exception_get_kind" (lean_exception @-> returning lean_exception_kind)
 
-(* * Lean names *)
-  module Lean_name = New_lean_typedef (struct let id = "lean_name" end)
+(* ** Lean names *)
                                      
   let lean_name = Lean_name.t
 
-(* ** Creation and deletion *)
   let lean_name_del =
     foreign "lean_name_del" (lean_name @-> returning void)
 
@@ -92,7 +111,7 @@ module Bindings (F : Cstubs.FOREIGN) = struct
 
   let lean_name_mk_str =
     foreign "lean_name_mk_str"
-      (lean_name @-> lean_string @->
+      (lean_name @-> string @->
        ptr lean_name @-> ptr lean_exception @-> returning lean_bool)
 
   let lean_name_mk_idx =
@@ -100,7 +119,6 @@ module Bindings (F : Cstubs.FOREIGN) = struct
       (lean_name @-> uint @->
        ptr lean_name @-> ptr lean_exception @-> returning lean_bool)
 
-(* ** Indicator functions *)
   let lean_name_is_anonymous =
     foreign "lean_name_is_anonymous" (lean_name @-> returning lean_bool)
 
@@ -110,7 +128,6 @@ module Bindings (F : Cstubs.FOREIGN) = struct
   let lean_name_is_idx =
     foreign "lean_name_is_idx" (lean_name @-> returning lean_bool)
 
-(* ** Equality and comparison *)
   let lean_name_eq =
     foreign "lean_name_eq" (lean_name @-> lean_name @-> returning lean_bool)
 
@@ -120,14 +137,13 @@ module Bindings (F : Cstubs.FOREIGN) = struct
   let lean_name_quick_lt =
     foreign "lean_name_quick_lt" (lean_name @-> lean_name @-> returning lean_bool)
 
-(* ** Destructors *)
   let lean_name_get_prefix =
     foreign "lean_name_get_prefix"
       (lean_name @-> ptr lean_name @-> ptr lean_exception @-> returning lean_bool)
 
   let lean_name_get_str =
     foreign "lean_name_get_str"
-      (lean_name @-> ptr lean_string_const @-> ptr lean_exception @-> returning lean_bool)
+      (lean_name @-> ptr lean_string @-> ptr lean_exception @-> returning lean_bool)
 
   let lean_name_get_idx =
     foreign "lean_name_get_idx"
@@ -135,16 +151,13 @@ module Bindings (F : Cstubs.FOREIGN) = struct
 
   let lean_name_to_string =
     foreign "lean_name_to_string"
-      (lean_name @-> ptr lean_string_const @-> ptr lean_exception @-> returning lean_bool)
+      (lean_name @-> ptr lean_string @-> ptr lean_exception @-> returning lean_bool)
 
-(* * Lean list name *)
-(* ** Module abstraction *)
-  module Lean_list_name = New_lean_typedef(struct let id = "lean_list_name" end)
+(* ** Lean list name *)
                                           
   let lean_list_name = Lean_list_name.t
   let lean_list_name_allocate = Lean_list_name.allocate
 
-(* ** Creation and deletion *)
   let lean_list_name_mk_nil = 
     foreign "lean_list_name_mk_nil"
        (ptr lean_list_name @-> ptr lean_exception @-> returning lean_bool)
@@ -153,10 +166,10 @@ module Bindings (F : Cstubs.FOREIGN) = struct
     foreign "lean_list_name_mk_cons"
       (lean_name @-> lean_list_name @->
        ptr lean_list_name @-> ptr lean_exception @-> returning lean_bool)
+
   let lean_list_name_del =
     foreign "lean_list_name_del" (lean_list_name @-> returning void)
 
-(* ** Indicator, equality and destructor functions *)
   let lean_list_name_is_cons =
     foreign "lean_list_name_is_cons" (lean_list_name @-> returning lean_bool)
 
@@ -171,6 +184,128 @@ module Bindings (F : Cstubs.FOREIGN) = struct
     foreign "lean_list_name_tail"
       (lean_list_name @-> ptr lean_list_name @-> ptr lean_exception @-> returning lean_bool)
 
+(* ** Lean universe *)
+  
+  (* FIXME: use Types.TYPE.enum instead to deal with lean_univ_kind<>int *)
+  let lean_univ_kind = int
+
+  let lean_univ = Lean_univ.t
+
+  let lean_univ_allocate = Lean_univ.allocate
+
+(* ** Creation and deletion *)
+
+  let lean_univ_mk_zero =
+    foreign "lean_univ_mk_zero" (ptr lean_univ @-> ptr lean_exception @-> returning lean_bool)
+
+  let lean_univ_mk_succ =
+    foreign "lean_univ_mk_succ"
+      (lean_univ @-> ptr lean_univ @-> ptr lean_exception @-> returning lean_bool)
+
+  let lean_univ_mk_max =
+    foreign "lean_univ_mk_max"
+      (lean_univ @-> lean_univ @-> ptr lean_univ @-> ptr lean_exception @-> returning lean_bool)
+
+  let lean_univ_mk_imax =
+    foreign "lean_univ_mk_imax"
+      (lean_univ @-> lean_univ @-> ptr lean_univ @-> ptr lean_exception @-> returning lean_bool)
+  
+  let lean_univ_mk_param =
+    foreign "lean_univ_mk_param"
+      (lean_name @-> ptr lean_univ @-> ptr lean_exception @-> returning lean_bool)
+
+  let lean_univ_mk_global =
+    foreign "lean_univ_mk_global"
+      (lean_name @-> ptr lean_univ @-> ptr lean_exception @-> returning lean_bool)
+
+  let lean_univ_mk_meta =
+    foreign "lean_univ_mk_meta"
+      (lean_name @-> ptr lean_univ @-> ptr lean_exception @-> returning lean_bool)
+
+  let lean_univ_to_string =
+    foreign "lean_univ_to_string"
+      (lean_univ @-> ptr lean_string @-> ptr lean_exception @-> returning lean_bool)
+                             
+(* FIXME: bind options
+/** \brief Similar to \c lean_univ_to_string, but uses pretty printing options in \c o,
+    when converting objection into a string. */
+lean_bool lean_univ_to_string_using(lean_univ u, lean_options o, char const ** r, lean_exception * ex);
+ *)
+
+  let lean_univ_del =
+    foreign "lean_univ_del" (lean_univ @-> returning void)
+
+  let lean_univ_kind =
+    foreign "lean_univ_get_kind" (lean_univ @-> returning lean_univ_kind)
+
+  let lean_univ_eq =
+    foreign "lean_univ_eq"
+      (lean_univ @-> lean_univ @-> ptr lean_bool @-> ptr lean_exception @-> returning lean_bool)
+
+  let lean_univ_lt =
+    foreign "lean_univ_lt"
+      (lean_univ @-> lean_univ @-> ptr lean_bool @-> ptr lean_exception @-> returning lean_bool)
+
+  let lean_univ_quick_lt =
+    foreign "lean_univ_quick_lt"
+      (lean_univ @-> lean_univ @-> ptr lean_bool @-> ptr lean_exception @-> returning lean_bool)
+
+  let lean_univ_geq =
+    foreign "lean_univ_geq"
+      (lean_univ @-> lean_univ @-> ptr lean_bool @-> ptr lean_exception @-> returning lean_bool)
+
+  let lean_univ_get_pred =
+    foreign "lean_univ_get_pred"
+      (lean_univ @-> ptr lean_univ @-> ptr lean_exception @-> returning lean_bool)
+
+  let lean_univ_get_max_lhs =
+    foreign "lean_univ_get_max_lhs"
+      (lean_univ @-> ptr lean_univ @-> ptr lean_exception @-> returning lean_bool)
+
+  let lean_univ_get_max_rhs =
+    foreign "lean_univ_get_max_rhs"
+      (lean_univ @-> ptr lean_univ @-> ptr lean_exception @-> returning lean_bool)
+
+  let lean_univ_get_name =
+    foreign "lean_univ_get_name"
+      (lean_univ @-> ptr lean_name @-> ptr lean_exception @-> returning lean_bool)
+
+  let lean_univ_normalize =
+    foreign "lean_univ_normalize"
+      (lean_univ @-> ptr lean_univ @-> ptr lean_exception @-> returning lean_bool)
+
+(* ** Lean universe list *)
+
+  let lean_list_univ = Lean_list_univ.t
+
+  let lean_list_univ_mk_nil =
+    foreign "lean_list_univ_mk_nil"
+      (ptr lean_list_univ @-> ptr lean_exception @-> returning lean_bool)
+
+  let lean_list_univ_mk_cons =
+    foreign "lean_list_univ_mk_cons" (lean_univ @-> lean_list_univ
+      @-> ptr lean_list_univ @-> ptr lean_exception @-> returning lean_bool)
+
+  let lean_list_univ_del =
+    foreign "lean_list_univ_del" (lean_list_univ @-> returning void)
+
+  let lean_list_univ_is_cons =
+    foreign "lean_list_univ_is_cons" (lean_list_univ @-> returning lean_bool)
+  
+  let lean_list_univ_eq =
+    foreign "lean_list_univ_eq" (lean_list_univ @-> lean_list_univ
+      @-> ptr lean_bool @-> ptr lean_exception @-> returning lean_bool)
+
+  let lean_list_univ_head =
+    foreign "lean_list_univ_head"
+      (lean_list_univ @-> ptr lean_univ @-> ptr lean_exception @-> returning lean_bool)
+
+  let lean_list_univ_tail =
+    foreign "lean_list_univ_tail"
+      (lean_list_univ @-> ptr lean_list_univ @-> ptr lean_exception @-> returning lean_bool)
+
+  let lean_univ_instantiate =
+    foreign "lean_univ_instantiate" (lean_univ @-> lean_list_name @-> lean_list_univ
+      @-> ptr lean_univ @-> ptr lean_exception @-> returning lean_bool)
+
 end
-
-
