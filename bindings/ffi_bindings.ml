@@ -63,13 +63,19 @@ module Bindings (F : Cstubs.FOREIGN) = struct
   module Lean_univ      = Lean_Typedef(struct let type_name = "lean_univ"      end)
   module Lean_list_univ = Lean_Typedef(struct let type_name = "lean_list_univ" end)
   module Lean_options   = Lean_Typedef(struct let type_name = "lean_options"   end)
+  module Lean_ios       = Lean_Typedef(struct let type_name = "lean_ios"       end)
+  module Lean_env       = Lean_Typedef(struct let type_name = "lean_env"       end)
+  module Lean_expr      = Lean_Typedef(struct let type_name = "lean_expr"      end)
 
   let lean_exception_allocate = Lean_exception.allocate
   let lean_name_allocate      = Lean_name.allocate
   let lean_name_list_allocate = Lean_list_name.allocate
   let lean_univ_allocate      = Lean_univ.allocate
   let lean_list_univ_allocate = Lean_list_univ.allocate
-  let lean_options            = Lean_options.allocate
+  let lean_options_allocate   = Lean_options.allocate
+  let lean_ios_allocate       = Lean_ios.allocate
+  let lean_env_allocate       = Lean_env.allocate
+  let lean_expr_allocate      = Lean_expr.allocate
 
 (* ** Lean strings (strings returned by lean) *)
 
@@ -371,5 +377,63 @@ module Bindings (F : Cstubs.FOREIGN) = struct
   let lean_univ_instantiate =
     foreign "lean_univ_instantiate" (lean_univ @-> lean_list_name @-> lean_list_univ
       @-> ptr lean_univ @-> ptr lean_exception @-> returning lean_bool)
+
+(** Lean expression *)
+
+  let lean_expr = Lean_expr.t
+
+(** Lean environment *)
+
+  let lean_env = Lean_env.t
+
+(** Lean IO state *)
+
+  let lean_ios = Lean_ios.t
+
+  let lean_ios_mk_std =
+    foreign "lean_ios_mk_std"
+      (lean_options @-> ptr lean_ios @-> ptr lean_exception @-> returning lean_bool)
+
+  let lean_ios_mk_buffered =
+    foreign "lean_ios_mk_buffered"
+      (lean_options @-> ptr lean_ios @-> ptr lean_exception @-> returning lean_bool)
+
+  let lean_ios_del =
+    foreign "lean_ios_del" (lean_ios @-> returning void)
+
+  let lean_ios_is_std =
+    foreign "lean_ios_is_std" (lean_ios @-> returning lean_bool)
+
+  let lean_ios_set_options =
+    foreign "lean_ios_set_options"
+      (lean_ios @-> lean_options @-> ptr lean_exception @-> returning lean_bool)
+
+  let lean_ios_get_options =
+    foreign "lean_ios_get_options"
+      (lean_ios @-> ptr lean_options @-> ptr lean_exception @-> returning lean_bool)
+
+  let lean_ios_get_regular =
+    foreign "lean_ios_get_regular"
+      (lean_ios @-> ptr lean_string @-> ptr lean_exception @-> returning lean_bool)
+
+  let lean_ios_get_diagnostic =
+    foreign "lean_ios_get_diagnostic"
+      (lean_ios @-> ptr lean_string @-> ptr lean_exception @-> returning lean_bool)
+
+  let lean_ios_reset_regular =
+    foreign "lean_ios_reset_regular"
+      (lean_ios @-> ptr lean_exception @-> returning lean_bool)
+
+  let lean_ios_reset_diagnostic =
+    foreign "lean_ios_reset_diagnostic"
+      (lean_ios @-> ptr lean_exception @-> returning lean_bool)
+
+  let lean_expr_to_pp_string =
+    foreign "lean_expr_to_pp_string" (lean_env @-> lean_ios @-> lean_expr
+      @-> ptr lean_string @-> ptr lean_exception @-> returning lean_bool)
+
+  let lean_expception_to_pp_string =
+    foreign "lean_exception_to_pp_string" (lean_env @-> lean_ios @-> lean_exception
+      @-> ptr lean_string @-> ptr lean_exception @-> returning lean_bool)
 
 end
