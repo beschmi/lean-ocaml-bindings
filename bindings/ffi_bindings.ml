@@ -252,9 +252,13 @@ module Bindings (F : Cstubs.FOREIGN) = struct
 
   let options_mk_empty = foreign "lean_options_mk_empty" (ptr options @-> ptr exc @-> ret_bool)
 
+  let options_del = foreign "lean_options_del" (options @-> returning void)
+
+  let options_join = foreign
+    "lean_options_join" (options @-> options @-> ptr options @-> ptr exc @-> ret_bool)
+
   let options_set_bool = foreign
-    "lean_options_set_bool" (options @-> name @-> lean_bool
-      @-> ptr options @-> ptr exc @-> ret_bool)
+    "lean_options_set_bool" (options @-> name @-> lean_bool @-> ptr options @-> ptr exc @-> ret_bool)
 
   let options_set_int = foreign
     "lean_options_set_int" (options @-> name @-> int @-> ptr options @-> ptr exc @-> ret_bool)
@@ -267,20 +271,6 @@ module Bindings (F : Cstubs.FOREIGN) = struct
 
   let options_set_string = foreign
     "lean_options_set_string" (options @-> name @-> string @-> ptr options @-> ptr exc @-> ret_bool)
-
-  let options_join = foreign
-    "lean_options_join" (options @-> options @-> ptr options @-> ptr exc @-> ret_bool)
-
-  let options_del = foreign "lean_options_del" (options @-> returning void)
-
-  let options_to_string = foreign
-    "lean_options_to_string" (options @-> ptr lean_string @-> ptr exc @-> ret_bool)
-
-  let options_eq = foreign "lean_options_eq" (options @-> options @-> ret_bool)
-
-  let options_empty = foreign "lean_options_empty" (options @-> ret_bool)
-
-  let options_contains = foreign "lean_options_contains" (options @-> name @-> ret_bool)
 
   let options_get_bool = foreign
     "lean_options_get_bool" (options @-> name @-> ptr lean_bool @-> ptr exc @-> ret_bool)
@@ -296,6 +286,15 @@ module Bindings (F : Cstubs.FOREIGN) = struct
 
   let options_get_string = foreign
     "lean_options_get_string" (options @-> name @-> ptr lean_string @-> ptr exc @-> ret_bool)
+
+  let options_eq = foreign "lean_options_eq" (options @-> options @-> ret_bool)
+
+  let options_empty = foreign "lean_options_empty" (options @-> ret_bool)
+
+  let options_contains = foreign "lean_options_contains" (options @-> name @-> ret_bool)
+
+  let options_to_string = foreign
+    "lean_options_to_string" (options @-> ptr lean_string @-> ptr exc @-> ret_bool)
 
 (* ** Lean universe *)
 
@@ -574,7 +573,7 @@ module Bindings (F : Cstubs.FOREIGN) = struct
   let exception_to_pp_string = foreign
     "lean_exception_to_pp_string" (env @-> ios @-> exc @-> ptr lean_string @-> ptr exc @-> ret_bool)
 
-(* ** Lean inductive datatypes *)
+(* ** Lean inductive types *)
 
   let inductive_type_del = foreign "lean_inductive_type_del" (inductive_type @-> returning void)
 
@@ -594,6 +593,8 @@ module Bindings (F : Cstubs.FOREIGN) = struct
   let inductive_type_get_constructors = foreign
     "lean_inductive_type_get_constructors" (inductive_type
       @-> ptr list_expr @-> ptr exc @-> ret_bool)
+
+(* ** Lean inductive type list *)
 
   let list_inductive_type_mk_nil = foreign
     "lean_list_inductive_type_mk_nil" (ptr list_inductive_type  @-> ptr exc @-> ret_bool)
@@ -620,6 +621,7 @@ module Bindings (F : Cstubs.FOREIGN) = struct
   let list_inductive_type_del = foreign
     "lean_list_inductive_type_del" (list_inductive_type @-> returning void)
 
+(* ** Lean inductive declarations *)
 
   let inductive_decl_mk = foreign
     "lean_inductive_decl_mk" (list_name @-> uint @-> list_inductive_type
