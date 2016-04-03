@@ -34,6 +34,9 @@ let to_bool lb =
     else if lb = false_ then false
     else failwith "Unexpected Lean_bool : not lean_true nor lean_false")
 
+let from_bool b =
+  if b then LeanT.Bool.true_ else LeanT.Bool.false_
+
 (* ** Exceptions *)
 
 type exc_kind =
@@ -302,9 +305,10 @@ module Options = struct
       (fun () -> deref_options_ptr o_p)
 
   let set_bool o n b =
+    let lb = from_bool b in
     let o_p = LeanB.options_allocate () in
     with_exn
-      (fun e_p -> LeanB.options_set_bool o n b o_p e_p)
+      (fun e_p -> LeanB.options_set_bool o n lb o_p e_p)
       (fun () -> deref_options_ptr o_p)
 
   let set_int o n i =
@@ -348,7 +352,7 @@ module Options = struct
     let i_p = allocate uint (Unsigned.UInt.of_int 0) in
     with_exn
       (fun e_p -> LeanB.options_get_unsigned o n i_p e_p)
-      (fun () -> Unsigned.UInt.to_int !@i_p)
+      (fun () -> !@i_p)
 
   let get_double o n =
     let i_p = allocate double 0.0 in

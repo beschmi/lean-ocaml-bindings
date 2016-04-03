@@ -79,7 +79,7 @@ end
 
 module ListName : sig
   val mk_nil  : unit -> list_name
-  val mk_cons :  name -> list_name -> list_name
+  val mk_cons : name -> list_name -> list_name
 
   val is_cons : list_name -> bool
   val eq      : list_name -> list_name -> bool
@@ -88,6 +88,33 @@ module ListName : sig
 end
 
 (* * Options *)
+
+module Options : sig
+
+  val mk_empty : unit -> options
+
+  val join : options -> options -> options
+
+  val set_bool     : options -> name -> bool -> options
+  val set_int      : options -> name -> int -> options
+  val set_unsigned : options -> name -> Unsigned.uint -> options
+  val set_double   : options -> name -> float -> options
+  val set_string   : options -> name -> string -> options
+
+  val get_bool     : options -> name -> bool
+  val get_int      : options -> name -> int
+  val get_unsigned : options -> name -> Unsigned.uint
+  val get_double   : options -> name -> float
+  val get_string   : options -> name -> string
+
+  val eq : options -> options -> bool
+
+  val empty    : options -> bool
+  val contains : options -> name -> bool
+
+  val to_string : options -> string
+
+end
 
 (* * Universe *)
 (* * List of universes *)

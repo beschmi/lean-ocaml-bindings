@@ -5,7 +5,7 @@ module LI = LeanInternal
 module L  = Lean
 module F  = Format
 
-(* * Test cases *)
+(* * Tests: internal *)
 
 let num_loops = 1000
 
@@ -91,6 +91,49 @@ let t_internal_list_name =
   assert_bool "a10" (LI.Name.eq na na');
   assert_bool "a11" (eq ln1 ln1')
 
+let t_internal_options =
+  "lean_options: *" >:: fun () ->
+  let open LI.Options in
+  let oe        = mk_empty () in
+  let n_bool   = L.Name.(mk (Str "o_bool"))   in
+  let n_int    = L.Name.(mk (Str "o_int"))    in
+  let n_uint   = L.Name.(mk (Str "o_uint"))   in
+  let n_double = L.Name.(mk (Str "o_double")) in
+  let n_string = L.Name.(mk (Str "o_string")) in
+  let v_bool   = true in
+  let v_int    = 42 in
+  let v_uint   = Unsigned.UInt.of_int 99 in
+  let v_double = 18.9 in
+  let v_string = "bar" in
+  (* set flags *)
+  let o1 = set_bool     oe n_bool   v_bool   in
+  let o1 = set_int      o1 n_int    v_int    in
+  let o1 = set_double   o1 n_double v_double in
+  let o1 = set_unsigned o1 n_uint   v_uint   in
+  let o2 = set_string   oe n_string v_string in
+  let o3 = join o1 o2 in
+  assert_equal ~msg:"a1" v_bool   (get_bool     o1 n_bool);
+  assert_equal ~msg:"a2" v_int    (get_int      o1 n_int);
+  assert_equal ~msg:"a3" v_double (get_double   o1 n_double);
+  assert_equal ~msg:"a4" v_uint   (get_unsigned o1 n_uint);
+  assert_equal ~msg:"a5" v_string (get_string   o2 n_string);
+  (* o3 has all entries *)
+  assert_equal ~msg:"a6"  v_bool   (get_bool     o3 n_bool);
+  assert_equal ~msg:"a7"  v_int    (get_int      o3 n_int);
+  assert_equal ~msg:"a8"  v_double (get_double   o3 n_double);
+  assert_equal ~msg:"a9"  v_uint   (get_unsigned o3 n_uint);
+  assert_equal ~msg:"a10" v_string (get_string   o3 n_string);
+  (* empty and contains *)
+  assert_equal ~msg:"a11" true  (empty oe);
+  assert_equal ~msg:"a12" true  (contains o2 n_string);
+  assert_equal ~msg:"a13" false (contains o1 n_string);
+  let s = "⟨o_bool ↦ true, o_int ↦ 42, o_double ↦ 18.9, o_uint ↦ 99, o_string ↦ \"bar\"⟩" in
+  assert_equal ~msg:"a14" ~printer:(fun s -> s)
+    s (to_string o3)
+  
+
+(* * Tests: high-level interface *)
+
 let t_name =
   "lean_name: *" >:: fun () ->
   let n = Name.mk (Name.Idx("hello",5)) in
@@ -118,6 +161,7 @@ let _ =
         t_internal_name_str;
         t_internal_name_idx;
         t_internal_list_name;
+        t_internal_options;
         t_name;
         t_list_name;
       ]
