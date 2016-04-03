@@ -9,6 +9,8 @@ module F  = Format
 
 let num_loops = 1000
 
+let aeq m a b = assert_equal ~msg:m a b
+
 let t_internal_name_anon =
   "lean_name: anon" >:: fun () ->
   let open LI.Name in
@@ -22,7 +24,7 @@ let t_internal_name_anon =
     assert_bool "" (not (quick_lt n n));
     let n2 = mk_anon () in
     assert_bool ""  (eq n n2);
-    assert_equal (to_string n) "[anonymous]"
+    aeq "" (to_string n) "[anonymous]"
   done
 
 let t_internal_name_str =
@@ -31,7 +33,7 @@ let t_internal_name_str =
   for i = 1 to num_loops do
     let na = mk_anon () in
     let ns = mk_str na "foo" in
-    assert_equal (get_str ns) "foo";
+    aeq "" (get_str ns) "foo";
     assert_bool "" (is_str ns);
     assert_bool "" (not @@ is_idx ns);
     assert_bool "" (not @@ is_anon ns);
@@ -109,28 +111,40 @@ let t_internal_options =
   let o1 = set_bool     oe n_bool   v_bool   in
   let o1 = set_int      o1 n_int    v_int    in
   let o1 = set_double   o1 n_double v_double in
-  let o1 = set_unsigned o1 n_uint   v_uint   in
+  let o1 = set_uint o1 n_uint   v_uint   in
   let o2 = set_string   oe n_string v_string in
   let o3 = join o1 o2 in
-  assert_equal ~msg:"a1" v_bool   (get_bool     o1 n_bool);
-  assert_equal ~msg:"a2" v_int    (get_int      o1 n_int);
-  assert_equal ~msg:"a3" v_double (get_double   o1 n_double);
-  assert_equal ~msg:"a4" v_uint   (get_unsigned o1 n_uint);
-  assert_equal ~msg:"a5" v_string (get_string   o2 n_string);
+  aeq "a1" v_bool   (get_bool   o1 n_bool);
+  aeq "a2" v_int    (get_int    o1 n_int);
+  aeq "a3" v_double (get_double o1 n_double);
+  aeq "a4" v_uint   (get_uint   o1 n_uint);
+  aeq "a5" v_string (get_string o2 n_string);
   (* o3 has all entries *)
-  assert_equal ~msg:"a6"  v_bool   (get_bool     o3 n_bool);
-  assert_equal ~msg:"a7"  v_int    (get_int      o3 n_int);
-  assert_equal ~msg:"a8"  v_double (get_double   o3 n_double);
-  assert_equal ~msg:"a9"  v_uint   (get_unsigned o3 n_uint);
-  assert_equal ~msg:"a10" v_string (get_string   o3 n_string);
+  aeq "a6"  v_bool   (get_bool   o3 n_bool);
+  aeq "a7"  v_int    (get_int    o3 n_int);
+  aeq "a8"  v_double (get_double o3 n_double);
+  aeq "a9"  v_uint   (get_uint   o3 n_uint);
+  aeq "a10" v_string (get_string o3 n_string);
   (* empty and contains *)
-  assert_equal ~msg:"a11" true  (empty oe);
-  assert_equal ~msg:"a12" true  (contains o2 n_string);
-  assert_equal ~msg:"a13" false (contains o1 n_string);
+  aeq "a11" true  (empty oe);
+  aeq "a12" true  (contains o2 n_string);
+  aeq "a13" false (contains o1 n_string);
   let s = "⟨o_bool ↦ true, o_int ↦ 42, o_double ↦ 18.9, o_uint ↦ 99, o_string ↦ \"bar\"⟩" in
-  assert_equal ~msg:"a14" ~printer:(fun s -> s)
-    s (to_string o3)
-  
+  aeq "a14" s (to_string o3)
+
+let t_internal_univ = 
+  "lean_univ: internal" >:: fun () ->
+  let open LI.Univ in
+  let u0 = mk_zero () in
+  aeq "1" true (eq (mk_zero ()) u0)
+  (* FIXME: add more tests *)
+
+let t_internal_list_univ = 
+  "lean_list_univ: internal" >:: fun () ->
+  let open LI.ListUniv in
+  let ul_nil = mk_nil () in
+  aeq "1" true (eq (mk_nil ()) ul_nil)
+  (* FIXME: add more tests *)
 
 (* * Tests: high-level interface *)
 
@@ -153,8 +167,7 @@ let t_list_name =
   let ns1 = List.map Name.view ns in
   let ns2 = List.map Name.view (Name.view_list nl) in
   assert_equal ~msg:"a1" ns1 ns2
-
-   
+ 
 let _ =
   let suite = "lean" >::: [
         t_internal_name_anon;
@@ -162,6 +175,8 @@ let _ =
         t_internal_name_idx;
         t_internal_list_name;
         t_internal_options;
+        t_internal_univ;
+        t_internal_list_univ;
         t_name;
         t_list_name;
       ]

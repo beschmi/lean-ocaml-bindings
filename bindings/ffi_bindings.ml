@@ -65,6 +65,11 @@ module Bindings (F : Cstubs.FOREIGN) = struct
 
   let ret_bool = returning lean_bool
 
+  let bool_allocate   () = allocate lean_bool 0
+  let uint_allocate   () = allocate uint (Unsigned.UInt.of_int 0)
+  let double_allocate () = allocate double 0.0
+  let int_allocate    () = allocate int 0
+
 (* ** Typedefs *)
 
   module Typedef (TN : sig val type_name : string end) : sig
@@ -263,7 +268,7 @@ module Bindings (F : Cstubs.FOREIGN) = struct
   let options_set_int = foreign
     "lean_options_set_int" (options @-> name @-> int @-> ptr options @-> ptr exc @-> ret_bool)
 
-  let options_set_unsigned = foreign
+  let options_set_uint = foreign
     "lean_options_set_unsigned" (options @-> name @-> uint @-> ptr options @-> ptr exc @-> ret_bool)
 
   let options_set_double = foreign
@@ -278,7 +283,7 @@ module Bindings (F : Cstubs.FOREIGN) = struct
   let options_get_int = foreign
     "lean_options_get_int" (options @-> name @-> ptr int @-> ptr exc @-> ret_bool)
 
-  let options_get_unsigned = foreign
+  let options_get_uint = foreign
     "lean_options_get_unsigned" (options @-> name @-> ptr uint @-> ptr exc @-> ret_bool)
 
   let options_get_double = foreign
@@ -669,60 +674,50 @@ module Bindings (F : Cstubs.FOREIGN) = struct
 
 (* ** Lean modules *)
 
-  let env_import =
-    foreign "lean_env_import" (env @-> ios @-> list_name
-      @-> ptr env @-> ptr exc @-> ret_bool)
+  let env_import = foreign
+    "lean_env_import" (env @-> ios @-> list_name @-> ptr env @-> ptr exc @-> ret_bool)
 
-  let env_export =
-    foreign "lean_env_export" (env @-> string @-> ptr exc @-> ret_bool)
+  let env_export = foreign "lean_env_export" (env @-> string @-> ptr exc @-> ret_bool)
 
-  let get_std_path =
-    foreign "lean_get_std_path" (ptr lean_string @-> ptr exc @-> ret_bool)
+  let get_std_path = foreign "lean_get_std_path" (ptr lean_string @-> ptr exc @-> ret_bool)
 
-  let get_hott_path =
-    foreign "lean_get_hott_path" (ptr lean_string @-> ptr exc @-> ret_bool)
+  let get_hott_path = foreign "lean_get_hott_path" (ptr lean_string @-> ptr exc @-> ret_bool)
 
 (* ** Lean parser *)
 
-  let parse_file =
-    foreign "lean_parse_file" (env @-> ios @-> string
-      @-> ptr env @-> ptr ios @-> ptr exc @-> ret_bool)
+  let parse_file = foreign
+    "lean_parse_file" (env @-> ios @-> string @-> ptr env @-> ptr ios @-> ptr exc @-> ret_bool)
 
-  let parse_commands =
-    foreign "lean_parse_commands" (env @-> ios @-> string
-      @-> ptr env @-> ptr ios @-> ptr exc @-> ret_bool)
+  let parse_commands = foreign
+    "lean_parse_commands" (env @-> ios @-> string @-> ptr env @-> ptr ios @-> ptr exc @-> ret_bool)
 
-  let parse_expr =
-    foreign "lean_parse_expr" (env @-> ios @-> string
-      @-> ptr expr @-> ptr list_name @-> ptr exc
-      @-> ret_bool)
+  let parse_expr = foreign
+    "lean_parse_expr" (env @-> ios @-> string
+      @-> ptr expr @-> ptr list_name @-> ptr exc @-> ret_bool)
 
 (* ** Lean type checker *)
 
-  let type_checker_mk =
-    foreign "lean_type_checker_mk" (env
-      @-> ptr type_checker @-> ptr exc @-> ret_bool)
+  let type_checker_mk = foreign
+    "lean_type_checker_mk" (env @-> ptr type_checker @-> ptr exc @-> ret_bool)
 
-  let type_checker_del =
-    foreign "lean_type_checker_del" (type_checker @-> returning void)
+  let type_checker_del = foreign "lean_type_checker_del" (type_checker @-> returning void)
 
-  let cnstr_seq_del =
-    foreign "lean_cnstr_seq_del" (cnstr_seq @-> returning void)
+  let cnstr_seq_del = foreign "lean_cnstr_seq_del" (cnstr_seq @-> returning void)
 
-  let lean_type_checker_infer =
-    foreign "lean_type_checker_infer" (type_checker @-> expr
+  let lean_type_checker_infer = foreign
+    "lean_type_checker_infer" (type_checker @-> expr
       @-> ptr expr @-> ptr cnstr_seq @-> ptr exc @-> ret_bool)
 
-  let lean_type_checker_check =
-    foreign "lean_type_checker_check" (type_checker @-> expr
+  let lean_type_checker_check = foreign
+    "lean_type_checker_check" (type_checker @-> expr
       @-> ptr expr @-> ptr cnstr_seq @-> ptr exc @-> ret_bool)
 
-  let lean_type_checker_whnf =
-    foreign "lean_type_checker_whnf" (type_checker @-> expr
+  let lean_type_checker_whnf = foreign
+    "lean_type_checker_whnf" (type_checker @-> expr
       @-> ptr expr @-> ptr cnstr_seq @-> ptr exc @-> ret_bool)
 
-  let lean_type_checker_is_def_eq =
-    foreign "lean_type_checker_is_def_eq" (type_checker @-> expr @-> expr
+  let lean_type_checker_is_def_eq = foreign
+    "lean_type_checker_is_def_eq" (type_checker @-> expr @-> expr
       @-> ptr lean_bool @-> ptr cnstr_seq @-> ptr exc @-> ret_bool)
 
 end

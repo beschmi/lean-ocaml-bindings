@@ -2,13 +2,23 @@ open Ffi_bindings
 
 (* * Lean types *)
 
-module Types : sig
-  type name
-  type list_name
-  type options
-end
-
-open Types
+type name
+type list_name
+type options
+type univ
+type list_univ
+type ios
+type env
+type decl
+type cert_decl
+type expr
+type list_expr
+type macro_def
+type inductive_type
+type list_inductive_type
+type inductive_decl
+type type_checker
+type cnstr_seq
 
 (* * Exception *)
 
@@ -95,17 +105,17 @@ module Options : sig
 
   val join : options -> options -> options
 
-  val set_bool     : options -> name -> bool -> options
-  val set_int      : options -> name -> int -> options
-  val set_unsigned : options -> name -> Unsigned.uint -> options
-  val set_double   : options -> name -> float -> options
-  val set_string   : options -> name -> string -> options
+  val set_bool   : options -> name -> bool -> options
+  val set_int    : options -> name -> int -> options
+  val set_uint   : options -> name -> Unsigned.uint -> options
+  val set_double : options -> name -> float -> options
+  val set_string : options -> name -> string -> options
 
-  val get_bool     : options -> name -> bool
-  val get_int      : options -> name -> int
-  val get_unsigned : options -> name -> Unsigned.uint
-  val get_double   : options -> name -> float
-  val get_string   : options -> name -> string
+  val get_bool   : options -> name -> bool
+  val get_int    : options -> name -> int
+  val get_uint   : options -> name -> Unsigned.uint
+  val get_double : options -> name -> float
+  val get_string : options -> name -> string
 
   val eq : options -> options -> bool
 
@@ -117,7 +127,55 @@ module Options : sig
 end
 
 (* * Universe *)
+
+module Univ : sig
+
+  val mk_zero : unit -> univ
+  val mk_succ : univ -> univ
+  val mk_max  : univ -> univ -> univ
+  val mk_imax : univ -> univ -> univ
+  val mk_param  : name -> univ
+  val mk_global : name -> univ
+  val mk_meta   : name -> univ
+
+  val get_pred : univ -> univ
+  val get_max_lhs : univ -> univ
+  val get_max_rhs : univ -> univ
+  val normalize : univ -> univ
+
+  val eq : univ -> univ -> bool
+  val lt : univ -> univ -> bool
+  val quick_lt : univ -> univ -> bool
+  val geq : univ -> univ -> bool
+
+  val to_string : univ -> string
+
+  val to_string_using : univ -> options -> string
+
+  val kind : univ -> univ_kind
+
+  val get_name : univ -> name
+
+end
+
 (* * List of universes *)
+
+module ListUniv : sig
+
+  val mk_nil : unit -> list_univ
+  val mk_cons : univ -> list_univ -> list_univ
+  
+  val head : list_univ -> univ
+  val tail : list_univ -> list_univ
+
+  val is_cons : list_univ -> bool
+
+  val eq : list_univ -> list_univ -> bool
+
+  val instantiate : univ -> list_name -> list_univ -> univ
+
+end
+
 (* * Expression *)
 (* * Environment *)
 (* * IO state *)
@@ -127,3 +185,6 @@ end
 (* * Modules *)
 (* * Parser *)
 (* * Type checker *)
+
+module TypeChecker : sig
+end
