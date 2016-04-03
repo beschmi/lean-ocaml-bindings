@@ -10,7 +10,7 @@ BuildTools:     ocamlbuild
 Library lean
   Path:             lib
   FindlibName:      lean
-  Modules:          Lean
+  Modules:          LeanInternal, Lean
   InternalModules:  Ffi_generated, Ffi_generated_types
   CSources:         ffi_generated_stubs.c
   CCOpt:            -I $pkg_ctypes_stubs

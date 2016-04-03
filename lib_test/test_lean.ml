@@ -1,7 +1,9 @@
 open OUnit
 open Lean
 
-module F = Format
+module LI = LeanInternal
+module L  = Lean
+module F  = Format
 
 (* * Test cases *)
 
@@ -9,7 +11,7 @@ let num_loops = 1000
 
 let t_internal_name_anon =
   "lean_name: anon" >:: fun () ->
-  let open NameInternal in
+  let open LI.Name in
   for i = 1 to num_loops do 
     let n = mk_anon () in
     assert_bool "" (not (is_str n));
@@ -25,7 +27,7 @@ let t_internal_name_anon =
 
 let t_internal_name_str =
   "lean_name: str" >:: fun () ->
-  let open NameInternal in
+  let open LI.Name in
   for i = 1 to num_loops do
     let na = mk_anon () in
     let ns = mk_str na "foo" in
@@ -45,7 +47,7 @@ let t_internal_name_str =
 
 let t_internal_name_idx =
   "lean_name: idx" >:: fun () ->
-  let open NameInternal in
+  let open LI.Name in
   for i = 1 to num_loops do
     let na = mk_anon () in
     let ns = mk_str ~str:"foo" na in
@@ -68,8 +70,8 @@ let t_internal_name_idx =
 
 let t_internal_list_name =
   "lean_list_name: *" >:: fun () ->
-  let open NameInternal in
-  let open ListNameInternal in
+  let open LI.Name in
+  let open LI.ListName in
   let lnil = mk_nil () in
   let na = mk_idx ~idx:7 @@ mk_str ~str:"foo" @@ mk_anon () in
   let ln1 = mk_cons na lnil in
@@ -86,7 +88,7 @@ let t_internal_list_name =
   assert_bool "a9" (not (eq lnil ln2));
   let na' = head ln2 in
   let ln1' = tail ln2 in
-  assert_bool "a10" (NameInternal.eq na na');
+  assert_bool "a10" (LI.Name.eq na na');
   assert_bool "a11" (eq ln1 ln1')
 
 let t_name =
@@ -108,6 +110,7 @@ let t_list_name =
   let ns1 = List.map Name.view ns in
   let ns2 = List.map Name.view (Name.view_list nl) in
   assert_equal ~msg:"a1" ns1 ns2
+
    
 let _ =
   let suite = "lean" >::: [
