@@ -503,6 +503,8 @@ module Bindings (F : Cstubs.FOREIGN) = struct
 
   let list_expr_del = foreign "lean_list_expr_del" (list_expr @-> returning void)
 
+  let decl_del = foreign "lean_decl_del" (decl @-> returning void) 
+
 (* ** Lean environment *)
 
   let env_mk_std = foreign "lean_env_mk_std" (uint @-> ptr env @-> ptr exc @-> ret_bool)

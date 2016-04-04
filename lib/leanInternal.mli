@@ -231,6 +231,32 @@ module ListExpr : sig
 end
                 
 (* * Environment *)
+module Env : sig
+  val mk_std         : Unsigned.uint -> env
+  val mk_hott        : Unsigned.uint -> env
+
+  val add_univ       : env -> name -> env
+  val add            : env -> cert_decl -> env
+  val replace        : env -> cert_decl -> env
+
+  val trust_level    : env -> Unsigned.uint
+  val proof_irrel    : env -> bool
+  val impredicative  : env -> bool
+
+  val contains_univ : env -> name -> bool
+  val contains_decl  : env -> name -> bool
+
+  val get_decl       : env -> name -> decl
+  val is_descendant  : env -> env -> bool
+  val forget         : env -> env
+
+(* FIXME: deal with callbacks into ocaml
+  val for_each_decl
+
+  val for_each_univ 
+ *)
+end
+               
 (* * IO state *)
 (* * Inductive types *)
 (* * Inductive type list *)

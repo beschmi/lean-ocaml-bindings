@@ -218,7 +218,10 @@ let deref_list_expr_ptr = deref_ptr LeanB.list_expr_del
 
 let deref_macro_def_ptr = deref_ptr LeanB.macro_def_del
                               
+let deref_env_ptr = deref_ptr LeanB.env_del
 
+let deref_decl_ptr = deref_ptr LeanB.decl_del
+                               
 let with_exn f g =
   let e_p = LeanB.exception_allocate () in
   let lb = to_bool (f e_p) in
@@ -244,7 +247,8 @@ let with_list_univ = with_wrapper LeanB.list_univ_allocate deref_list_univ_ptr
 let with_expr      = with_wrapper LeanB.expr_allocate      deref_expr_ptr
 let with_list_expr = with_wrapper LeanB.list_expr_allocate deref_list_expr_ptr
 let with_macro_def = with_wrapper LeanB.macro_def_allocate deref_macro_def_ptr
-
+let with_env       = with_wrapper LeanB.env_allocate       deref_env_ptr
+let with_decl      = with_wrapper LeanB.decl_allocate      deref_decl_ptr
 (* * Names *)
 
 module Name = struct
@@ -418,6 +422,29 @@ module ListExpr = struct
 end
                 
 (* * Environment *)
+module Env =  struct
+  let mk_std i = with_env (LeanB.env_mk_std i)
+  let mk_hott i = with_env (LeanB.env_mk_hott i)
+
+  let add_univ e n = with_env (LeanB.env_add_univ e n)
+  let add e d = with_env (LeanB.env_add e d)
+  let replace e d = with_env (LeanB.env_replace e d)
+
+  let trust_level e = LeanB.env_trust_level e
+  let proof_irrel e = LeanB.env_proof_irrel e |> to_bool
+  let impredicative e = LeanB.env_impredicative e |> to_bool
+
+  let contains_univ e n = LeanB.env_contains_univ e n |> to_bool
+  let contains_decl e n = LeanB.env_contains_decl e n |> to_bool
+
+  let get_decl e n = with_decl (LeanB.env_get_decl e n)
+
+  let is_descendant e1 e2 = LeanB.env_is_descendant e1 e2 |> to_bool
+                                                    
+  let forget e = with_env (LeanB.env_forget e)                        
+          
+end
+                
 (* * IO state *)
 (* * Inductive types *)
 (* * Inductive declarations *)
