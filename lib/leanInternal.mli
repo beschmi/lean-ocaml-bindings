@@ -177,6 +177,59 @@ module ListUniv : sig
 end
 
 (* * Expression *)
+
+module Expr : sig
+  val mk_var : Unsigned.uint -> expr
+  val mk_sort : univ -> expr
+  val mk_const : name -> list_univ -> expr
+  val mk_app : expr -> expr -> expr
+  val mk_lambda : name -> expr -> expr -> binder_kind -> expr
+  val mk_pi : name -> expr -> expr -> binder_kind -> expr
+  val mk_macro : macro_def -> list_expr -> expr
+  val mk_local : name -> expr -> expr
+  val mk_local_ext : name -> name -> expr -> binder_kind -> expr
+  val mk_metavar : name -> expr -> expr
+
+  (*val macro_def_del : macro_def -> unit*)
+
+  val macro_def_eq : macro_def -> macro_def -> bool
+  val macro_def_to_string : macro_def -> string
+
+  val to_string : expr -> string
+  val get_kind : expr -> expr_kind
+                           
+  val eq : expr -> expr -> bool
+  val lt : expr -> expr -> bool
+  val quick_lt : expr -> expr -> bool
+
+  val get_var_idx : expr -> Unsigned.uint
+  val get_sort_univ : expr -> univ
+  val get_const_name : expr -> name
+  val get_const_univ : expr -> list_univ
+  val get_app_fun : expr -> expr
+  val get_app_arg : expr -> expr
+  val get_mlocal_name : expr -> name
+  val get_mlocal_type : expr -> expr
+  val get_local_pp_name : expr -> name
+  val get_local_binder_kind : expr -> binder_kind
+  val get_binding_name : expr -> name
+  val get_binding_domain : expr -> expr
+  val get_binding_body : expr -> expr
+  val get_binding_binder_kind : expr -> binder_kind
+  val get_macro_def : expr -> macro_def
+  val get_macro_args : expr -> list_expr
+end
+
+module ListExpr : sig
+  val mk_nil  : unit -> list_expr
+  val mk_cons : expr -> list_expr -> list_expr
+
+  val is_cons : list_expr -> bool
+  val eq      : list_expr -> list_expr -> bool
+  val head    : list_expr -> expr
+  val tail    : list_expr -> list_expr
+end
+                
 (* * Environment *)
 (* * IO state *)
 (* * Inductive types *)

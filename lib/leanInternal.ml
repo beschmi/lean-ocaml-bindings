@@ -212,6 +212,13 @@ let deref_univ_ptr = deref_ptr LeanB.univ_del
 
 let deref_list_univ_ptr = deref_ptr LeanB.list_univ_del
 
+let deref_expr_ptr = deref_ptr LeanB.expr_del
+
+let deref_list_expr_ptr = deref_ptr LeanB.list_expr_del
+
+let deref_macro_def_ptr = deref_ptr LeanB.macro_def_del
+                              
+
 let with_exn f g =
   let e_p = LeanB.exception_allocate () in
   let lb = to_bool (f e_p) in
@@ -233,8 +240,10 @@ let with_name      = with_wrapper LeanB.name_allocate      deref_name_ptr
 let with_list_name = with_wrapper LeanB.list_name_allocate deref_list_name_ptr
 let with_options   = with_wrapper LeanB.options_allocate   deref_options_ptr
 let with_univ      = with_wrapper LeanB.univ_allocate      deref_univ_ptr
-let with_univ      = with_wrapper LeanB.univ_allocate      deref_univ_ptr
 let with_list_univ = with_wrapper LeanB.list_univ_allocate deref_list_univ_ptr
+let with_expr      = with_wrapper LeanB.expr_allocate      deref_expr_ptr
+let with_list_expr = with_wrapper LeanB.list_expr_allocate deref_list_expr_ptr
+let with_macro_def = with_wrapper LeanB.macro_def_allocate deref_macro_def_ptr
 
 (* * Names *)
 
@@ -354,6 +363,60 @@ module ListUniv = struct
 end
 
 (* * Expression *)
+
+module Expr = struct
+  let (!) = from_binder_kind
+  let mk_var i                  = with_expr (LeanB.expr_mk_var i)
+  let mk_sort u                 = with_expr (LeanB.expr_mk_sort u)
+  let mk_const n lu             = with_expr (LeanB.expr_mk_const n lu)
+  let mk_app f a                = with_expr (LeanB.expr_mk_app f a)
+  let mk_lambda n t b k         = with_expr (LeanB.expr_mk_lambda n t b !k)
+  let mk_pi n t b k             = with_expr (LeanB.expr_mk_pi n t b !k)
+  let mk_macro m args           = with_expr (LeanB.expr_mk_macro m args)
+  let mk_local n t              = with_expr (LeanB.expr_mk_local n t)
+  let mk_local_ext n pp_n t k   = with_expr (LeanB.expr_mk_local_ext n pp_n t !k)
+  let mk_metavar n t            = with_expr (LeanB.expr_mk_metavar n t)
+
+  let macro_def_eq m1 m2        = with_bool (LeanB.macro_def_eq m1 m2)
+  let macro_def_to_string m     = with_string (LeanB.macro_def_to_string m)
+
+  let to_string e               = with_string (LeanB.expr_to_string e)
+  let get_kind e                = LeanB.expr_get_kind e |> to_expr_kind
+                                       
+  let eq       u1 u2            = with_bool (LeanB.expr_eq u1 u2)
+  let lt       u1 u2            = with_bool (LeanB.expr_lt u1 u2)
+  let quick_lt u1 u2            = with_bool (LeanB.expr_quick_lt u1 u2)
+
+  let get_var_idx e             = with_uint (LeanB.expr_get_var_idx e)
+  let get_sort_univ e           = with_univ (LeanB.expr_get_sort_univ e)
+  let get_const_name e          = with_name (LeanB.expr_get_const_name e)
+  let get_const_univ e          = with_list_univ (LeanB.expr_get_const_univs e)
+  let get_app_fun e             = with_expr (LeanB.expr_get_app_fun e)
+  let get_app_arg e             = with_expr (LeanB.expr_get_app_arg e)
+  let get_mlocal_name e         = with_name (LeanB.expr_get_mlocal_name e)
+  let get_mlocal_type e         = with_expr (LeanB.expr_get_mlocal_type e)
+  let get_local_pp_name e       = with_name (LeanB.expr_get_local_pp_name e)
+  let get_local_binder_kind e   = with_int (LeanB.expr_get_local_binder_kind e) |> to_binder_kind
+  let get_binding_name e        = with_name (LeanB.expr_get_binding_name e)
+  let get_binding_domain e      = with_expr (LeanB.expr_get_binding_domain e)
+  let get_binding_body e        = with_expr (LeanB.expr_get_binding_body e)
+  let get_binding_binder_kind e = with_int (LeanB.expr_get_binding_binder_kind e) |> to_binder_kind
+  let get_macro_def e           = with_macro_def (LeanB.expr_get_macro_def e)
+  let get_macro_args e          = with_list_expr (LeanB.expr_get_macro_args e)
+end
+
+module ListExpr = struct
+  let mk_nil ()    = with_list_expr LeanB.list_expr_mk_nil
+  let mk_cons u lu = with_list_expr (LeanB.list_expr_mk_cons u lu)
+  
+  let head lu = with_expr (LeanB.list_expr_head lu)
+  let tail lu = with_list_expr (LeanB.list_expr_tail lu)
+
+  let is_cons lu = to_bool (LeanB.list_expr_is_cons lu)
+
+  let eq lu1 lu2 = with_bool (LeanB.list_expr_eq lu1 lu2)
+end
+                
 (* * Environment *)
 (* * IO state *)
 (* * Inductive types *)

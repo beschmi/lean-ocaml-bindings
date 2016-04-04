@@ -497,11 +497,11 @@ module Bindings (F : Cstubs.FOREIGN) = struct
 
   let expr_get_kind = foreign "lean_expr_get_kind" (expr @-> returning expr_kind)
 
-  let lean_expr_del = foreign "lean_expr_del" (expr @-> returning void)
+  let expr_del = foreign "lean_expr_del" (expr @-> returning void)
 
-  let lean_macro_def_del = foreign "lean_macro_def_del" (macro_def @-> returning void)
+  let macro_def_del = foreign "lean_macro_def_del" (macro_def @-> returning void)
 
-  let lean_list_expr_del = foreign "lean_list_expr_del" (list_expr @-> returning void)
+  let list_expr_del = foreign "lean_list_expr_del" (list_expr @-> returning void)
 
 (* ** Lean environment *)
 
