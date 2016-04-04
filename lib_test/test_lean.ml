@@ -167,7 +167,18 @@ let t_list_name =
   let ns1 = List.map Name.view ns in
   let ns2 = List.map Name.view (Name.view_list nl) in
   assert_equal ~msg:"a1" ns1 ns2
- 
+
+let t_internal_expr =
+  "lean_expr: internal" >::
+    fun () ->
+    let open LI.Expr in
+    let uzero = Unsigned.UInt.of_int 0 in
+    let e0 = mk_var uzero in
+    let e1 = mk_const (Name.mk Name.Anon) (LI.ListUniv.mk_nil ()) in
+    aeq "e0 <> e1" false (eq e0 e1);
+    aeq "e0 -> #0" "#0" (to_string e0);
+    aeq "e1 -> [anonymous]" "[anonymous]" (to_string e1)
+    
 let _ =
   let suite = "lean" >::: [
         t_internal_name_anon;
@@ -177,6 +188,7 @@ let _ =
         t_internal_options;
         t_internal_univ;
         t_internal_list_univ;
+        t_internal_expr;
         t_name;
         t_list_name;
       ]
