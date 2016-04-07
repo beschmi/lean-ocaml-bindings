@@ -200,35 +200,35 @@ let deref_ptr finaliser e_p =
   Gc.finalise finaliser e;
   e
 
-let deref_exception_ptr = deref_ptr LeanB.exception_del
+let deref_exception_ptr       = deref_ptr LeanB.exception_del
 
-let deref_name_ptr = deref_ptr LeanB.name_del
+let deref_name_ptr            = deref_ptr LeanB.name_del
 
-let deref_list_name_ptr = deref_ptr LeanB.list_name_del
+let deref_list_name_ptr       = deref_ptr LeanB.list_name_del
 
-let deref_options_ptr = deref_ptr LeanB.options_del
+let deref_options_ptr         = deref_ptr LeanB.options_del
 
-let deref_univ_ptr = deref_ptr LeanB.univ_del
+let deref_univ_ptr            = deref_ptr LeanB.univ_del
 
-let deref_list_univ_ptr = deref_ptr LeanB.list_univ_del
+let deref_list_univ_ptr       = deref_ptr LeanB.list_univ_del
 
-let deref_expr_ptr = deref_ptr LeanB.expr_del
+let deref_expr_ptr            = deref_ptr LeanB.expr_del
 
-let deref_list_expr_ptr = deref_ptr LeanB.list_expr_del
+let deref_list_expr_ptr       = deref_ptr LeanB.list_expr_del
 
-let deref_macro_def_ptr = deref_ptr LeanB.macro_def_del
+let deref_macro_def_ptr       = deref_ptr LeanB.macro_def_del
                               
-let deref_env_ptr = deref_ptr LeanB.env_del
+let deref_env_ptr             = deref_ptr LeanB.env_del
 
-let deref_decl_ptr = deref_ptr LeanB.decl_del
+let deref_decl_ptr            = deref_ptr LeanB.decl_del
 
-let deref_ios = deref_ptr LeanB.ios_del
+let deref_ios                 = deref_ptr LeanB.ios_del
 
-let deref_inductive_type = deref_ptr LeanB.inductive_type_del
+let deref_inductive_type      = deref_ptr LeanB.inductive_type_del
 
 let deref_list_inductive_type = deref_ptr LeanB.list_inductive_type_del
 
-let deref_inductive_decl = deref_ptr LeanB.inductive_decl_del
+let deref_inductive_decl      = deref_ptr LeanB.inductive_decl_del
                           
                                
 let with_exn f g =
@@ -371,6 +371,7 @@ module Univ = struct
 
   let get_name u = with_name (LeanB.univ_get_name u)
 
+  let instantiate u ln lu = with_univ (LeanB.univ_instantiate u ln lu)
 end
 
 (* * List of universes *)
@@ -386,9 +387,6 @@ module ListUniv = struct
   let is_cons lu = to_bool (LeanB.list_univ_is_cons lu)
 
   let eq lu1 lu2 = with_bool (LeanB.list_univ_eq lu1 lu2)
-
-  let instantiate u ln lu = with_univ (LeanB.univ_instantiate u ln lu)
-
 end
 
 (* * Expression *)

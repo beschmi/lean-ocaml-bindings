@@ -155,7 +155,8 @@ module Univ : sig
   val kind : univ -> univ_kind
 
   val get_name : univ -> name
-
+                           
+  val instantiate : univ -> list_name -> list_univ -> univ
 end
 
 (* * List of universes *)
@@ -171,9 +172,6 @@ module ListUniv : sig
   val is_cons : list_univ -> bool
 
   val eq : list_univ -> list_univ -> bool
-
-  val instantiate : univ -> list_name -> list_univ -> univ
-
 end
 
 (* * Expression *)
