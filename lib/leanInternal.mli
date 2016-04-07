@@ -218,6 +218,8 @@ module Expr : sig
   val get_binding_binder_kind : expr -> binder_kind
   val get_macro_def           : expr -> macro_def
   val get_macro_args          : expr -> list_expr
+
+  val to_pp_string : env -> ios -> expr -> string
 end
 
 module ListExpr : sig
@@ -255,12 +257,64 @@ module Env : sig
 
   val for_each_univ 
  *)
+  val add_inductive                         : env -> inductive_decl -> env
+  val is_inductive_type                     : env -> name ->           inductive_decl
+  val is_constructor                        : env -> name ->           name
+  val is_recursor                           : env -> name ->           name
+
+  val get_inductive_type_num_indices        : env -> name ->           Unsigned.uint
+  val get_inductive_type_num_minor_premises : env -> name ->           Unsigned.uint
+  val get_inductive_type_num_type_formers   : env -> name ->           Unsigned.uint
+  val get_inductive_type_has_dep_elim       : env -> name ->           bool
 end
                
 (* * IO state *)
+
+module Ios : sig
+  val mk_std           : options -> ios
+  val mk_buffered      : options -> ios
+
+  val is_std           : ios -> bool
+  val set_options      : ios -> options -> unit
+  val get_options      : ios -> options
+  val get_regular      : ios -> string
+  val get_diagnostic   : ios -> string
+  val reset_regular    : ios -> unit
+  val reset_diagnostic : ios -> unit
+
+  (* FIXME : exception in input 
+  val exception_to_pp_string : env -> ios -> exc -> string *)               
+end
+               
 (* * Inductive types *)
+module InductiveType : sig
+  val mk                : name -> expr -> list_expr -> inductive_type
+  val get_recursor_name : name -> name
+
+  val get_name          : inductive_type -> name
+  val get_type          : inductive_type -> expr
+  val get_constructors  : inductive_type -> list_expr                                       
+end
+                         
 (* * Inductive type list *)
+module ListInductiveType : sig
+  val mk_nil  : unit -> list_inductive_type
+  val mk_cons : inductive_type -> list_inductive_type -> list_inductive_type
+
+  val is_cons : list_inductive_type -> bool
+  val eq      : list_inductive_type -> list_inductive_type -> bool
+  val head    : list_inductive_type -> inductive_type
+  val tail    : list_inductive_type -> list_inductive_type                                         
+end
+                             
 (* * Inductive declarations *)
+module InductiveDecl : sig
+  val mk              : list_name -> Unsigned.uint -> list_inductive_type -> inductive_decl
+                                                                  
+  val get_univ_params : inductive_decl -> list_name
+  val get_num_params  : inductive_decl -> Unsigned.uint 
+  val get_types       : inductive_decl -> list_inductive_type
+end                     
 (* * Modules *)
 (* * Parser *)
 (* * Type checker *)

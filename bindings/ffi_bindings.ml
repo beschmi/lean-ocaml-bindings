@@ -69,6 +69,8 @@ module Bindings (F : Cstubs.FOREIGN) = struct
   let uint_allocate   () = allocate uint (Unsigned.UInt.of_int 0)
   let double_allocate () = allocate double 0.0
   let int_allocate    () = allocate int 0
+  (*let unit_allocate   () = allocate void ()*)
+                                    
 
 (* ** Typedefs *)
 
@@ -638,7 +640,7 @@ module Bindings (F : Cstubs.FOREIGN) = struct
     "lean_inductive_decl_get_univ_params" (inductive_decl
       @-> ptr list_name @-> ptr exc @-> ret_bool)
 
-  let lean_inductive_decl_get_num_params = foreign
+  let inductive_decl_get_num_params = foreign
     "lean_inductive_decl_get_num_params" (inductive_decl @-> ptr uint @-> ptr exc @-> ret_bool)
 
   let inductive_decl_get_types = foreign
@@ -660,7 +662,7 @@ module Bindings (F : Cstubs.FOREIGN) = struct
   let env_get_inductive_type_num_indices = foreign
     "lean_env_get_inductive_type_num_indices" (env @-> name @-> ptr uint @-> ptr exc @-> ret_bool)
 
-  let lean_env_get_inductive_type_num_minor_premises = foreign
+  let env_get_inductive_type_num_minor_premises = foreign
     "lean_env_get_inductive_type_num_minor_premises" (env @-> name
       @-> ptr uint @-> ptr exc @-> ret_bool)
 

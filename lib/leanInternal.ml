@@ -221,6 +221,15 @@ let deref_macro_def_ptr = deref_ptr LeanB.macro_def_del
 let deref_env_ptr = deref_ptr LeanB.env_del
 
 let deref_decl_ptr = deref_ptr LeanB.decl_del
+
+let deref_ios = deref_ptr LeanB.ios_del
+
+let deref_inductive_type = deref_ptr LeanB.inductive_type_del
+
+let deref_list_inductive_type = deref_ptr LeanB.list_inductive_type_del
+
+let deref_inductive_decl = deref_ptr LeanB.inductive_decl_del
+                          
                                
 let with_exn f g =
   let e_p = LeanB.exception_allocate () in
@@ -239,6 +248,11 @@ let with_string    = with_wrapper LeanB.string_allocate    deref_string_ptr
 let with_uint      = with_wrapper LeanB.uint_allocate      (!@)
 let with_int       = with_wrapper LeanB.int_allocate       (!@)
 let with_double    = with_wrapper LeanB.double_allocate    (!@)
+                                  
+(* FIXME : how do we handle a function with no "return ptr" ?
+I have chosen to return unit, thus needing a specific 'with_unit' exception catcher*)
+let with_unit f    = with_exn     f (fun () -> ())(*with_wrapper LeanB.unit_allocate      (!@)*)
+                                  
 let with_name      = with_wrapper LeanB.name_allocate      deref_name_ptr
 let with_list_name = with_wrapper LeanB.list_name_allocate deref_list_name_ptr
 let with_options   = with_wrapper LeanB.options_allocate   deref_options_ptr
@@ -249,6 +263,17 @@ let with_list_expr = with_wrapper LeanB.list_expr_allocate deref_list_expr_ptr
 let with_macro_def = with_wrapper LeanB.macro_def_allocate deref_macro_def_ptr
 let with_env       = with_wrapper LeanB.env_allocate       deref_env_ptr
 let with_decl      = with_wrapper LeanB.decl_allocate      deref_decl_ptr
+let with_ios       = with_wrapper LeanB.ios_allocate       deref_ios
+let with_inductive_type =
+                     with_wrapper LeanB.inductive_type_allocate
+                                                           deref_inductive_type
+let with_list_inductive_type =
+                     with_wrapper LeanB.list_inductive_type_allocate
+                                                           deref_list_inductive_type
+let with_inductive_decl =
+                     with_wrapper LeanB.inductive_decl_allocate
+                                                           deref_inductive_decl
+                                       
 (* * Names *)
 
 module Name = struct
@@ -407,6 +432,8 @@ module Expr = struct
   let get_binding_binder_kind e = with_int (LeanB.expr_get_binding_binder_kind e) |> to_binder_kind
   let get_macro_def e           = with_macro_def (LeanB.expr_get_macro_def e)
   let get_macro_args e          = with_list_expr (LeanB.expr_get_macro_args e)
+
+  let to_pp_string env ios expr = with_string(LeanB.expr_to_pp_string env ios expr)
 end
 
 module ListExpr = struct
@@ -416,7 +443,7 @@ module ListExpr = struct
   let head lu = with_expr (LeanB.list_expr_head lu)
   let tail lu = with_list_expr (LeanB.list_expr_tail lu)
 
-  let is_cons lu = to_bool (LeanB.list_expr_is_cons lu)
+  let is_cons lu = LeanB.list_expr_is_cons lu |> to_bool
 
   let eq lu1 lu2 = with_bool (LeanB.list_expr_eq lu1 lu2)
 end
@@ -442,12 +469,66 @@ module Env =  struct
   let is_descendant e1 e2 = LeanB.env_is_descendant e1 e2 |> to_bool
                                                     
   let forget e = with_env (LeanB.env_forget e)                        
-          
+
+ let add_inductive env inductive_decl = with_env(LeanB.env_add_inductive env inductive_decl)
+ let is_inductive_type env name = with_inductive_decl(LeanB.env_is_inductive_type env name)
+ let is_constructor env name = with_name(LeanB.env_is_constructor env name)
+ let is_recursor env name = with_name(LeanB.env_is_recursor env name)
+
+ let get_inductive_type_num_indices env name = with_uint(LeanB.env_get_inductive_type_num_indices env name)
+ let get_inductive_type_num_minor_premises env name = with_uint(LeanB.env_get_inductive_type_num_minor_premises env name)
+ let get_inductive_type_num_type_formers env name = with_uint(LeanB.env_get_inductive_type_num_type_formers env name)
+ let get_inductive_type_has_dep_elim env name = with_bool(LeanB.env_get_inductive_type_has_dep_elim env name)
 end
                 
 (* * IO state *)
+module Ios = struct
+  let mk_std options = with_ios(LeanB.ios_mk_std options)
+  let mk_buffered options = with_ios(LeanB.ios_mk_buffered options)
+
+  let is_std ios = LeanB.ios_is_std ios |> to_bool
+  let set_options ios options = with_unit(LeanB.ios_set_options ios options) (* FIXME : with_unit *)
+  let get_options ios = with_options(LeanB.ios_get_options ios)
+  let get_regular ios = with_string(LeanB.ios_get_regular ios)
+  let get_diagnostic ios = with_string(LeanB.ios_get_diagnostic ios)
+  let reset_regular ios = with_unit(LeanB.ios_reset_regular ios) (* FIXME : with_unit *)
+  let reset_diagnostic ios = with_unit(LeanB.ios_reset_diagnostic ios) (* FIXME : with_unit *)
+                                      
+(* FIXME : exception in input 
+  val exception_to_pp_string : env -> ios -> exc -> string *)               
+end
+
+
 (* * Inductive types *)
+module InductiveType = struct
+ let mk n e list_expr = with_inductive_type(LeanB.inductive_type_mk n e list_expr)
+ let get_recursor_name n = with_name(LeanB.get_recursor_name n)
+
+ let get_name itype = with_name(LeanB.inductive_type_get_name itype)
+ let get_type itype = with_expr(LeanB.inductive_type_get_type itype)
+ let get_constructors itype = with_list_expr(LeanB.inductive_type_get_constructors itype)
+end
+  
+(* * Inductive type list *)
+module ListInductiveType = struct
+ let mk_nil () = with_list_inductive_type(LeanB.list_inductive_type_mk_nil)
+ let mk_cons itype list_itype  = with_list_inductive_type(LeanB.list_inductive_type_mk_cons itype list_itype)
+
+ let is_cons list_itype  = LeanB.list_inductive_type_is_cons list_itype |> to_bool
+ let eq list_itype list_itype  = with_bool(LeanB.list_inductive_type_eq list_itype list_itype)
+ let head list_itype  = with_inductive_type(LeanB.list_inductive_type_head list_itype)
+ let tail list_itype  = with_list_inductive_type(LeanB.list_inductive_type_tail list_itype)
+end
+  
 (* * Inductive declarations *)
+module InductiveDecl = struct
+ let mk ns i list_itypes = with_inductive_decl(LeanB.inductive_decl_mk ns i list_itypes)
+     
+ let get_univ_params idecl = with_list_name(LeanB.inductive_decl_get_univ_params idecl)
+ let get_num_params idecl = with_uint (LeanB.inductive_decl_get_num_params idecl)
+ let get_types idecl = with_list_inductive_type(LeanB.inductive_decl_get_types idecl)
+end  
+
 (* * Modules *)
 (* * Parser *)
 (* * Type checker *)
