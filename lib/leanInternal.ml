@@ -222,13 +222,13 @@ let deref_env_ptr             = deref_ptr LeanB.env_del
 
 let deref_decl_ptr            = deref_ptr LeanB.decl_del
 
-let deref_ios                 = deref_ptr LeanB.ios_del
+let deref_ios_ptr             = deref_ptr LeanB.ios_del
 
-let deref_inductive_type      = deref_ptr LeanB.inductive_type_del
+let deref_inductive_type_ptr  = deref_ptr LeanB.inductive_type_del
 
-let deref_list_inductive_type = deref_ptr LeanB.list_inductive_type_del
+let deref_list_inductive_type_ptr = deref_ptr LeanB.list_inductive_type_del
 
-let deref_inductive_decl      = deref_ptr LeanB.inductive_decl_del
+let deref_inductive_decl_ptr  = deref_ptr LeanB.inductive_decl_del
                           
                                
 let with_exn f g =
@@ -237,12 +237,20 @@ let with_exn f g =
   if lb then g ()
   else raise_exception (deref_exception_ptr e_p)
 
-let with_wrapper alloc deref f =
+let with_wrapper alloc deref (f : _ ptr -> _) =
   let n_p = alloc () in
   with_exn
     (fun e_p -> f n_p e_p)
     (fun () -> deref n_p)
 
+let with_pair_wrapper allocs derefs (f : _ ptr -> _ ptr -> _) =
+  let alloc1,alloc2 = allocs and
+      deref1,deref2 = derefs in
+  let n_p1 = alloc1 () and n_p2 = alloc2 () in
+  with_exn
+    (fun e_p -> f n_p1 n_p2 e_p)
+    (fun () -> (deref1 n_p1, deref2 n_p2))
+    
 let with_bool      = with_wrapper LeanB.bool_allocate      (fun p -> to_bool (!@ p))
 let with_string    = with_wrapper LeanB.string_allocate    deref_string_ptr
 let with_uint      = with_wrapper LeanB.uint_allocate      (!@)
@@ -263,17 +271,26 @@ let with_list_expr = with_wrapper LeanB.list_expr_allocate deref_list_expr_ptr
 let with_macro_def = with_wrapper LeanB.macro_def_allocate deref_macro_def_ptr
 let with_env       = with_wrapper LeanB.env_allocate       deref_env_ptr
 let with_decl      = with_wrapper LeanB.decl_allocate      deref_decl_ptr
-let with_ios       = with_wrapper LeanB.ios_allocate       deref_ios
+let with_ios       = with_wrapper LeanB.ios_allocate       deref_ios_ptr
 let with_inductive_type =
                      with_wrapper LeanB.inductive_type_allocate
-                                                           deref_inductive_type
+                                                           deref_inductive_type_ptr
 let with_list_inductive_type =
                      with_wrapper LeanB.list_inductive_type_allocate
-                                                           deref_list_inductive_type
+                                                           deref_list_inductive_type_ptr
 let with_inductive_decl =
                      with_wrapper LeanB.inductive_decl_allocate
-                                                           deref_inductive_decl
-                                       
+                                                           deref_inductive_decl_ptr
+
+
+                                                           
+let with_env_and_ios        = with_pair_wrapper
+                                (LeanB.env_allocate ?finalise:None, LeanB.ios_allocate ?finalise:None)
+                                (deref_env_ptr, deref_ios_ptr)
+                         
+let with_expr_and_list_name = with_pair_wrapper
+                                (LeanB.expr_allocate ?finalise:None, LeanB.list_name_allocate ?finalise:None)
+                                (deref_expr_ptr, deref_list_name_ptr)
 (* * Names *)
 
 module Name = struct
@@ -529,6 +546,12 @@ end
 
 (* * Modules *)
 (* * Parser *)
+module Parse = struct
+  let file env ios fname = with_env_and_ios(LeanB.parse_file env ios fname)
+  let commands env ios str = with_env_and_ios(LeanB.parse_commands env ios str)
+  let expr env ios str = with_expr_and_list_name(LeanB.parse_expr env ios str)
+end
+
 (* * Type checker *)
 
 module TypeChecker = struct

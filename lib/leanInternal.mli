@@ -312,9 +312,16 @@ module InductiveDecl : sig
   val get_univ_params : inductive_decl -> list_name
   val get_num_params  : inductive_decl -> Unsigned.uint 
   val get_types       : inductive_decl -> list_inductive_type
-end                     
+end
+                         
 (* * Modules *)
 (* * Parser *)
+module Parse : sig
+  val file : env -> ios -> string -> env * ios
+  val commands : env -> ios -> string -> env * ios
+  val expr : env -> ios -> string -> expr * list_name
+end
+                  
 (* * Type checker *)
 
 module TypeChecker : sig
