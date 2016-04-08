@@ -291,6 +291,63 @@ let with_env_and_ios        = with_pair_wrapper
 let with_expr_and_list_name = with_pair_wrapper
                                 (LeanB.expr_allocate ?finalise:None, LeanB.list_name_allocate ?finalise:None)
                                 (deref_expr_ptr, deref_list_name_ptr)
+
+module type ListBase = sig
+  type t
+  type list_t
+                            
+  val mk_nil  : unit -> list_t
+  val mk_cons : t -> list_t -> list_t
+
+  val is_cons : list_t -> bool
+  val eq      : list_t -> list_t -> bool
+  val head    : list_t -> t
+  val tail    : list_t -> list_t
+end
+
+module type List = sig
+  type t
+  type list_t
+
+  val to_list : list_t -> t list
+  val of_list : t list -> list_t
+  val ( @: ) : t -> list_t -> list_t
+  val ( ! ) : t -> list_t
+                            
+  val mk_nil  : unit -> list_t
+  val mk_cons : t -> list_t -> list_t
+
+  val is_cons : list_t -> bool
+  val eq      : list_t -> list_t -> bool
+  val head    : list_t -> t
+  val tail    : list_t -> list_t
+end
+                                              
+module ListMake (X : ListBase) = struct
+  type t = X.t
+  type list_t = X.list_t
+                  
+  let mk_nil = X.mk_nil
+  let mk_cons = X.mk_cons
+  let (@:) = mk_cons
+  let (!) x = x @: (mk_nil ())
+                  
+  let is_cons = X.is_cons
+  let eq = X.eq
+  let head = X.head
+  let tail = X.tail
+
+  let rec to_list = function
+    | l when is_cons l -> (head l) :: (to_list l)
+    | _ -> []
+
+  let rec of_list = function
+    | x :: xs -> mk_cons x (of_list xs)
+    | _ -> mk_nil ()
+end
+                                   
+
+                                
 (* * Names *)
 
 module Name = struct
@@ -314,8 +371,10 @@ module Name = struct
 
 end
 
-module ListName = struct
-
+module ListName = ListMake (struct
+  type t = name
+  type list_t = list_name
+                  
   let mk_nil  ()   = with_list_name LeanB.list_name_mk_nil
   let mk_cons n ln = with_list_name (LeanB.list_name_mk_cons n ln)
 
@@ -325,7 +384,7 @@ module ListName = struct
   let head ln = with_name (LeanB.list_name_head ln)
   let tail ln = with_list_name (LeanB.list_name_tail ln)
 
-end
+end)
 
 (* * Options *)
 
@@ -393,7 +452,9 @@ end
 
 (* * List of universes *)
 
-module ListUniv = struct
+module ListUniv = ListMake (struct
+  type t = univ
+  type list_t = list_univ
 
   let mk_nil ()    = with_list_univ LeanB.list_univ_mk_nil
   let mk_cons u lu = with_list_univ (LeanB.list_univ_mk_cons u lu)
@@ -404,7 +465,7 @@ module ListUniv = struct
   let is_cons lu = to_bool (LeanB.list_univ_is_cons lu)
 
   let eq lu1 lu2 = with_bool (LeanB.list_univ_eq lu1 lu2)
-end
+end)
 
 (* * Expression *)
 
@@ -451,7 +512,10 @@ module Expr = struct
   let to_pp_string env ios expr = with_string(LeanB.expr_to_pp_string env ios expr)
 end
 
-module ListExpr = struct
+module ListExpr = ListMake (struct
+  type t = expr
+  type list_t = list_expr
+
   let mk_nil ()    = with_list_expr LeanB.list_expr_mk_nil
   let mk_cons u lu = with_list_expr (LeanB.list_expr_mk_cons u lu)
   
@@ -461,7 +525,7 @@ module ListExpr = struct
   let is_cons lu = LeanB.list_expr_is_cons lu |> to_bool
 
   let eq lu1 lu2 = with_bool (LeanB.list_expr_eq lu1 lu2)
-end
+end)
                 
 (* * Environment *)
 module Env =  struct
@@ -485,15 +549,20 @@ module Env =  struct
                                                     
   let forget e = with_env (LeanB.env_forget e)                        
 
- let add_inductive env inductive_decl = with_env(LeanB.env_add_inductive env inductive_decl)
- let is_inductive_type env name = with_inductive_decl(LeanB.env_is_inductive_type env name)
- let is_constructor env name = with_name(LeanB.env_is_constructor env name)
- let is_recursor env name = with_name(LeanB.env_is_recursor env name)
+  (* Inductives *)
+  let add_inductive env inductive_decl = with_env(LeanB.env_add_inductive env inductive_decl)
+  let is_inductive_type env name = with_inductive_decl(LeanB.env_is_inductive_type env name)
+  let is_constructor env name = with_name(LeanB.env_is_constructor env name)
+  let is_recursor env name = with_name(LeanB.env_is_recursor env name)
 
- let get_inductive_type_num_indices env name = with_uint(LeanB.env_get_inductive_type_num_indices env name)
- let get_inductive_type_num_minor_premises env name = with_uint(LeanB.env_get_inductive_type_num_minor_premises env name)
- let get_inductive_type_num_type_formers env name = with_uint(LeanB.env_get_inductive_type_num_type_formers env name)
- let get_inductive_type_has_dep_elim env name = with_bool(LeanB.env_get_inductive_type_has_dep_elim env name)
+  let get_inductive_type_num_indices env name = with_uint(LeanB.env_get_inductive_type_num_indices env name)
+  let get_inductive_type_num_minor_premises env name = with_uint(LeanB.env_get_inductive_type_num_minor_premises env name)
+  let get_inductive_type_num_type_formers env name = with_uint(LeanB.env_get_inductive_type_num_type_formers env name)
+  let get_inductive_type_has_dep_elim env name = with_bool(LeanB.env_get_inductive_type_has_dep_elim env name)
+
+  (* Modules *)
+  let import env ios modules = with_env(LeanB.env_import env ios modules)
+  let export env fname = with_unit(LeanB.env_export env fname)
 end
                 
 (* * IO state *)
@@ -525,7 +594,10 @@ module InductiveType = struct
 end
   
 (* * Inductive type list *)
-module ListInductiveType = struct
+module ListInductiveType = ListMake (struct
+  type t = inductive_type
+  type list_t = list_inductive_type
+
  let mk_nil () = with_list_inductive_type(LeanB.list_inductive_type_mk_nil)
  let mk_cons itype list_itype  = with_list_inductive_type(LeanB.list_inductive_type_mk_cons itype list_itype)
 
@@ -533,7 +605,7 @@ module ListInductiveType = struct
  let eq list_itype list_itype  = with_bool(LeanB.list_inductive_type_eq list_itype list_itype)
  let head list_itype  = with_inductive_type(LeanB.list_inductive_type_head list_itype)
  let tail list_itype  = with_list_inductive_type(LeanB.list_inductive_type_tail list_itype)
-end
+end)
   
 (* * Inductive declarations *)
 module InductiveDecl = struct
@@ -545,6 +617,11 @@ module InductiveDecl = struct
 end  
 
 (* * Modules *)
+module Module = struct
+  let get_std_path  () = with_string(LeanB.get_std_path)
+  let get_hott_path () = with_string(LeanB.get_hott_path)
+end
+                  
 (* * Parser *)
 module Parse = struct
   let file env ios fname = with_env_and_ios(LeanB.parse_file env ios fname)

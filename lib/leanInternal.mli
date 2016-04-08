@@ -66,6 +66,25 @@ type binder_kind =
   | Binder_strict_implicit
   | Binder_inst_implicit
 
+(* General List module type signature *)
+module type List = sig
+  type t
+  type list_t
+
+  val to_list : list_t -> t list
+  val of_list : t list -> list_t
+  val ( @: ) : t -> list_t -> list_t
+  val ( ! ) : t -> list_t
+         
+  val mk_nil  : unit -> list_t
+  val mk_cons : t -> list_t -> list_t
+
+  val is_cons : list_t -> bool
+  val eq      : list_t -> list_t -> bool
+  val head    : list_t -> t
+  val tail    : list_t -> list_t
+end
+         
 (* * Names *)
 
 module Name : sig
@@ -87,15 +106,9 @@ module Name : sig
   val to_string  : name -> string
 end
 
-module ListName : sig
-  val mk_nil  : unit -> list_name
-  val mk_cons : name -> list_name -> list_name
-
-  val is_cons : list_name -> bool
-  val eq      : list_name -> list_name -> bool
-  val head    : list_name -> name
-  val tail    : list_name -> list_name
-end
+module ListName : List with
+         type t = name and
+         type list_t = list_name
 
 (* * Options *)
 
@@ -160,20 +173,10 @@ module Univ : sig
 end
 
 (* * List of universes *)
-
-module ListUniv : sig
-
-  val mk_nil : unit -> list_univ
-  val mk_cons : univ -> list_univ -> list_univ
-  
-  val head : list_univ -> univ
-  val tail : list_univ -> list_univ
-
-  val is_cons : list_univ -> bool
-
-  val eq : list_univ -> list_univ -> bool
-end
-
+module ListUniv : List with
+         type t = univ and
+         type list_t = list_univ
+                         
 (* * Expression *)
 
 module Expr : sig
@@ -220,16 +223,10 @@ module Expr : sig
   val to_pp_string : env -> ios -> expr -> string
 end
 
-module ListExpr : sig
-  val mk_nil  : unit -> list_expr
-  val mk_cons : expr -> list_expr -> list_expr
-
-  val is_cons : list_expr -> bool
-  val eq      : list_expr -> list_expr -> bool
-  val head    : list_expr -> expr
-  val tail    : list_expr -> list_expr
-end
-                
+module ListExpr : List with
+         type t = expr and
+         type list_t = list_expr
+                       
 (* * Environment *)
 module Env : sig
   val mk_std         : Unsigned.uint -> env
@@ -255,6 +252,7 @@ module Env : sig
 
   val for_each_univ 
  *)
+  (* Inductives *)
   val add_inductive                         : env -> inductive_decl -> env
   val is_inductive_type                     : env -> name ->           inductive_decl
   val is_constructor                        : env -> name ->           name
@@ -264,6 +262,10 @@ module Env : sig
   val get_inductive_type_num_minor_premises : env -> name ->           Unsigned.uint
   val get_inductive_type_num_type_formers   : env -> name ->           Unsigned.uint
   val get_inductive_type_has_dep_elim       : env -> name ->           bool
+
+  (* Modules *)
+  val import : env -> ios -> list_name -> env
+  val export : env -> string -> unit
 end
                
 (* * IO state *)
@@ -295,15 +297,9 @@ module InductiveType : sig
 end
                          
 (* * Inductive type list *)
-module ListInductiveType : sig
-  val mk_nil  : unit -> list_inductive_type
-  val mk_cons : inductive_type -> list_inductive_type -> list_inductive_type
-
-  val is_cons : list_inductive_type -> bool
-  val eq      : list_inductive_type -> list_inductive_type -> bool
-  val head    : list_inductive_type -> inductive_type
-  val tail    : list_inductive_type -> list_inductive_type                                         
-end
+module ListInductiveType : List with
+         type t = inductive_type and
+         type list_t = list_inductive_type
                              
 (* * Inductive declarations *)
 module InductiveDecl : sig
@@ -315,6 +311,11 @@ module InductiveDecl : sig
 end
                          
 (* * Modules *)
+module Module : sig
+  val get_std_path : unit -> string
+  val get_hott_path : unit -> string
+end
+                  
 (* * Parser *)
 module Parse : sig
   val file : env -> ios -> string -> env * ios
