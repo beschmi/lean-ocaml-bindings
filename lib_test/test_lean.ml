@@ -169,8 +169,7 @@ let t_list_name =
   assert_equal ~msg:"a1" ns1 ns2
 
 let t_internal_expr =
-  "lean_expr: internal" >::
-    fun () ->
+  "lean_expr: internal" >:: fun () ->
     let open LI.Expr in
     let uzero = Unsigned.UInt.of_int 0 in
     let e0 = mk_var uzero in
@@ -178,6 +177,22 @@ let t_internal_expr =
     aeq "e0 <> e1" false (eq e0 e1);
     aeq "e0 -> #0" "#0" (to_string e0);
     aeq "e1 -> [anonymous]" "[anonymous]" (to_string e1)
+
+let t_internal_parse =
+  "lean_parse: internal" >:: fun () ->
+    let (!) = Unsigned.UInt.of_int in
+    let open LI in
+    let env = Env.mk_std !0 in                         
+    let options = Options.mk_empty () in
+    let ios = Ios.mk_std options in
+    (* print_string (Module.get_std_path ());
+    let env =
+      let module N = Name in
+      let module LN = ListName in
+      Env.import env ios (LN.of_list [N.mk_str (N.mk_anon ()) ~str:"init"]) in *)
+    let (env,ios) = Parse.commands env ios "variable x : Prop variable y : Prop axiom H : x && y || x -> x" in
+    ignore(env,ios)
+    
     
 let _ =
   let suite = "lean" >::: [
@@ -191,6 +206,7 @@ let _ =
         t_internal_expr;
         t_name;
         t_list_name;
+        t_internal_parse (* FIXME : fails when trying to import 'init' *)
       ]
   in
   OUnit2.run_test_tt_main @@ ounit2_of_ounit1 suite;
