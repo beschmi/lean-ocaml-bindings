@@ -180,17 +180,24 @@ let t_internal_expr =
 
 let t_internal_parse =
   "lean_parse: internal" >:: fun () ->
-    let (!) = Unsigned.UInt.of_int in
+    let (!!) = Unsigned.UInt.of_int in
     let open LI in
-    let env = Env.mk_std !0 in                         
+    let env = Env.mk_std !!1 in (* with !!0 it may loop at import ... *)
     let options = Options.mk_empty () in
     let ios = Ios.mk_std options in
-    (* print_string (Module.get_std_path ());
+    print_string ("\n" ^ Module.get_std_path ());
+    let (!) str =
+      Name.mk_str (Name.mk_anon ()) ~str in
     let env =
-      let module N = Name in
       let module LN = ListName in
-      Env.import env ios (LN.of_list [N.mk_str (N.mk_anon ()) ~str:"init"]) in *)
-    let (env,ios) = Parse.commands env ios "variable x : Prop variable y : Prop axiom H : x && y || x -> x" in
+      Env.import env ios (LN.of_list [!"init"(*; !"data/fin"*)])  in
+    (* 'groups.lean' requires 'data.fin' to be imported ;
+          both importing it with 'Env.import' or with its own 'import data.fin' line in the .lean file work 
+          (the latter option seems to be a little bit faster though) *)
+    let (env,ios) =
+      Parse.commands env ios "constant (q : ℕ)" in
+    let (env,ios) =
+      Parse.file env ios "lib_test/groups.lean" in
     ignore(env,ios)
     
     

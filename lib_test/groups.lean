@@ -4,7 +4,7 @@ open nat fin
 
 -- * Finite fields and groups
 
-constant (q : ℕ)
+--constant (q : ℕ)
 
 definition fq := fin q
 notation `𝓕` := fq
