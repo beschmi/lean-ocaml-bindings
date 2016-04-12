@@ -200,6 +200,8 @@ let deref_ptr finaliser e_p =
   Gc.finalise finaliser e;
   e
 
+let deref_bool_ptr p          = to_bool (!@ p)
+                                        
 let deref_exception_ptr       = deref_ptr LeanB.exception_del
 
 let deref_name_ptr            = deref_ptr LeanB.name_del
@@ -229,8 +231,12 @@ let deref_inductive_type_ptr  = deref_ptr LeanB.inductive_type_del
 let deref_list_inductive_type_ptr = deref_ptr LeanB.list_inductive_type_del
 
 let deref_inductive_decl_ptr  = deref_ptr LeanB.inductive_decl_del
-                          
-                               
+
+let deref_type_checker_ptr    = deref_ptr LeanB.type_checker_del
+
+let deref_cnstr_seq_ptr       = deref_ptr LeanB.cnstr_seq_del
+
+                                          
 let with_exn f g =
   let e_p = LeanB.exception_allocate () in
   let lb = to_bool (f e_p) in
@@ -251,7 +257,7 @@ let with_pair_wrapper allocs derefs (f : _ ptr -> _ ptr -> _) =
     (fun e_p -> f n_p1 n_p2 e_p)
     (fun () -> (deref1 n_p1, deref2 n_p2))
     
-let with_bool      = with_wrapper LeanB.bool_allocate      (fun p -> to_bool (!@ p))
+let with_bool      = with_wrapper LeanB.bool_allocate      deref_bool_ptr
 let with_string    = with_wrapper LeanB.string_allocate    deref_string_ptr
 let with_uint      = with_wrapper LeanB.uint_allocate      (!@)
 let with_int       = with_wrapper LeanB.int_allocate       (!@)
@@ -281,8 +287,9 @@ let with_list_inductive_type =
 let with_inductive_decl =
                      with_wrapper LeanB.inductive_decl_allocate
                                                            deref_inductive_decl_ptr
-
-
+let with_type_checker =
+                     with_wrapper LeanB.type_checker_allocate
+                                                           deref_type_checker_ptr
                                                            
 let with_env_and_ios        = with_pair_wrapper
                                 (LeanB.env_allocate ?finalise:None, LeanB.ios_allocate ?finalise:None)
@@ -291,6 +298,16 @@ let with_env_and_ios        = with_pair_wrapper
 let with_expr_and_list_name = with_pair_wrapper
                                 (LeanB.expr_allocate ?finalise:None, LeanB.list_name_allocate ?finalise:None)
                                 (deref_expr_ptr, deref_list_name_ptr)
+
+let with_expr_and_cnstr_seq = with_pair_wrapper
+                                (LeanB.expr_allocate ?finalise:None, LeanB.cnstr_seq_allocate ?finalise:None)
+                                (deref_expr_ptr, deref_cnstr_seq_ptr)
+
+let with_bool_and_cnstr_seq = with_pair_wrapper
+                                (LeanB.bool_allocate, LeanB.cnstr_seq_allocate ?finalise:None)
+                                (deref_bool_ptr, deref_cnstr_seq_ptr)
+
+                                
 
 module type ListBase = sig
   type t
@@ -571,12 +588,12 @@ module Ios = struct
   let mk_buffered options = with_ios(LeanB.ios_mk_buffered options)
 
   let is_std ios = LeanB.ios_is_std ios |> to_bool
-  let set_options ios options = with_unit(LeanB.ios_set_options ios options) (* FIXME : with_unit *)
+  let set_options ios options = with_unit(LeanB.ios_set_options ios options) 
   let get_options ios = with_options(LeanB.ios_get_options ios)
   let get_regular ios = with_string(LeanB.ios_get_regular ios)
   let get_diagnostic ios = with_string(LeanB.ios_get_diagnostic ios)
-  let reset_regular ios = with_unit(LeanB.ios_reset_regular ios) (* FIXME : with_unit *)
-  let reset_diagnostic ios = with_unit(LeanB.ios_reset_diagnostic ios) (* FIXME : with_unit *)
+  let reset_regular ios = with_unit(LeanB.ios_reset_regular ios) 
+  let reset_diagnostic ios = with_unit(LeanB.ios_reset_diagnostic ios) 
                                       
 (* FIXME : exception in input 
   val exception_to_pp_string : env -> ios -> exc -> string *)               
@@ -632,4 +649,9 @@ end
 (* * Type checker *)
 
 module TypeChecker = struct
+  let mk env                  = with_type_checker       (LeanB.type_checker_mk env)
+  let infer ty_chkr expr      = with_expr_and_cnstr_seq (LeanB.type_checker_infer ty_chkr expr)
+  let check ty_chkr expr      = with_expr_and_cnstr_seq (LeanB.type_checker_check ty_chkr expr)
+  let whnf  ty_chkr expr      = with_expr_and_cnstr_seq (LeanB.type_checker_whnf  ty_chkr expr)
+  let is_def_eq ty_chkr e1 e2 = with_bool_and_cnstr_seq (LeanB.type_checker_is_def_eq ty_chkr e1 e2)
 end 

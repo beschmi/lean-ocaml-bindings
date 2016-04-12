@@ -326,4 +326,11 @@ end
 (* * Type checker *)
 
 module TypeChecker : sig
+  val mk : env -> type_checker
+
+  val infer : type_checker -> expr -> (expr * cnstr_seq)
+  val check : type_checker -> expr -> (expr * cnstr_seq)
+  val whnf  : type_checker -> expr -> (expr * cnstr_seq)
+
+  val is_def_eq : type_checker -> expr -> expr -> (bool * cnstr_seq)
 end

@@ -708,19 +708,19 @@ module Bindings (F : Cstubs.FOREIGN) = struct
 
   let cnstr_seq_del = foreign "lean_cnstr_seq_del" (cnstr_seq @-> returning void)
 
-  let lean_type_checker_infer = foreign
+  let type_checker_infer = foreign
     "lean_type_checker_infer" (type_checker @-> expr
       @-> ptr expr @-> ptr cnstr_seq @-> ptr exc @-> ret_bool)
 
-  let lean_type_checker_check = foreign
+  let type_checker_check = foreign
     "lean_type_checker_check" (type_checker @-> expr
       @-> ptr expr @-> ptr cnstr_seq @-> ptr exc @-> ret_bool)
 
-  let lean_type_checker_whnf = foreign
+  let type_checker_whnf = foreign
     "lean_type_checker_whnf" (type_checker @-> expr
       @-> ptr expr @-> ptr cnstr_seq @-> ptr exc @-> ret_bool)
 
-  let lean_type_checker_is_def_eq = foreign
+  let type_checker_is_def_eq = foreign
     "lean_type_checker_is_def_eq" (type_checker @-> expr @-> expr
       @-> ptr lean_bool @-> ptr cnstr_seq @-> ptr exc @-> ret_bool)
 
