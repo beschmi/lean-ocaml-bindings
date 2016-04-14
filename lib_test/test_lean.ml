@@ -10,8 +10,6 @@ module F  = Format
 let num_loops = 1000
 
 let aeq m a b = assert_equal ~msg:m a b
-
-let (@<) f g x' = f (g x')
                     
 let t_open,
     t_print,
@@ -207,6 +205,7 @@ let t_internal_parse =
     t_open ~name:"LEAN PATH" (); (
       Module.get_std_path () |> t_print);
     t_close();
+    
     let (!) str =
       Name.mk_str (Name.mk_anon ()) ~str in
     let env =
@@ -222,6 +221,11 @@ let t_internal_parse =
     let (env,ios) =
       Parse.commands env ios "example {x : 𝓕} : ⟦x⟧ = ⟦x⟧ := rfl" in
     Env.export env ~olean_file:"export_test.olean";
+    
+    let string_of_local e =
+      let open LI in
+      (Expr.to_pp_string env ios e) ^ " : " ^ (Expr.to_pp_string env ios @@ Expr.get_mlocal_type e) in
+    
     let open LI.Expr in
     let uzero = Unsigned.UInt.of_int 0 in
     let e0 = mk_var uzero in
@@ -232,8 +236,12 @@ let t_internal_parse =
     let pp_string = to_pp_string env ios in
     t_open ~name:"Expressions" (); (
       t_open ~name:"Sorts" (); (
-        (pp_string p) ^ " : " ^ (pp_string prop_sort) |> t_print;
-        (pp_string p) ^ " : " ^ (Expr.get_mlocal_type p |> pp_string) |> t_print );
+        string_of_local p |> t_print );
+      t_close ();
+      t_open ~name:"Decls" (); (
+        let q_decl = Env.get_decl env !"q" in
+        aeq "Decl.get_kind q_decl = Decl_const" (Decl.get_kind q_decl) Decl_const;
+        Decl.get_type q_decl |> Expr.to_string |> t_print );
       t_close ();
       aeq "e0 <> e1" false (eq e0 e1);
       aeq "e0 -> #0" "#0" (pp_string e0);
