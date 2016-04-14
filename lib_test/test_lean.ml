@@ -11,6 +11,25 @@ let num_loops = 1000
 
 let aeq m a b = assert_equal ~msg:m a b
 
+let (@<) f g x' = f (g x')
+                    
+let t_open,
+    t_print,
+    t_close  =
+  let n = ref 0 in
+  let nl () = "\n" ^ (String.make n.contents '>') ^ " " in
+  let (!) f = f () in
+  let open' ?(name="Test") () =
+    incr n;
+    print_string (!nl ^ name ^ ":");
+  and print' s =
+    print_string(!nl ^ s)
+  and close' () =
+    decr n;
+    print_string !nl
+  in
+  (open', print', close')
+
 let t_internal_name_anon =
   "lean_name: anon" >:: fun () ->
   let open LI.Name in
@@ -185,7 +204,9 @@ let t_internal_parse =
     let env = Env.mk_std !!1 in (* with !!0 it may loop at import ... *)
     let options = Options.mk_empty () in
     let ios = Ios.mk_std options in
-    print_string ("\n" ^ Module.get_std_path ());
+    t_open ~name:"LEAN PATH" (); (
+      Module.get_std_path () |> t_print);
+    t_close();
     let (!) str =
       Name.mk_str (Name.mk_anon ()) ~str in
     let env =
@@ -198,7 +219,26 @@ let t_internal_parse =
       Parse.commands env ios "constant (q : ℕ)" in
     let (env,ios) =
       Parse.file env ios "lib_test/groups.lean" in
-    ignore(env,ios)
+    let (env,ios) =
+      Parse.commands env ios "example {x : 𝓕} : ⟦x⟧ = ⟦x⟧ := rfl" in
+    Env.export env ~olean_file:"export_test.olean";
+    let open LI.Expr in
+    let uzero = Unsigned.UInt.of_int 0 in
+    let e0 = mk_var uzero in
+    let univ0 = Univ.mk_zero () in
+    let prop_sort = mk_sort (univ0) in
+    let p = mk_local !"p" prop_sort in
+    let e1 = mk_const (Lean.Name.mk Lean.Name.Anon) (ListUniv.of_list [Univ.mk_zero ()]) in
+    let pp_string = to_pp_string env ios in
+    t_open ~name:"Expressions" (); (
+      t_open ~name:"Sorts" (); (
+        (pp_string p) ^ " : " ^ (pp_string prop_sort) |> t_print;
+        (pp_string p) ^ " : " ^ (Expr.get_mlocal_type p |> pp_string) |> t_print );
+      t_close ();
+      aeq "e0 <> e1" false (eq e0 e1);
+      aeq "e0 -> #0" "#0" (pp_string e0);
+      aeq "e1 -> [anonymous]" "[anonymous]" (pp_string e1) );
+    t_close ()
     
     
 let _ =
@@ -213,7 +253,7 @@ let _ =
         t_internal_expr;
         t_name;
         t_list_name;
-        t_internal_parse (* FIXME : fails when trying to import 'init' *)
+        t_internal_parse
       ]
   in
   OUnit2.run_test_tt_main @@ ounit2_of_ounit1 suite;
