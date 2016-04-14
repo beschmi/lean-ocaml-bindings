@@ -66,6 +66,14 @@ type binder_kind =
   | Binder_strict_implicit
   | Binder_inst_implicit
 
+(* * Declaration kinds *)
+
+type decl_kind =
+  | Decl_const
+  | Decl_axiom
+  | Decl_def
+  | Decl_thm
+
 (* General List module type signature *)
 module type List = sig
   type t
@@ -265,7 +273,7 @@ module Env : sig
 
   (* Modules *)
   val import : env -> ios -> list_name -> env
-  val export : env -> string -> unit
+  val export : env -> olean_file:string -> unit
 end
                
 (* * IO state *)
@@ -324,7 +332,6 @@ module Parse : sig
 end
                   
 (* * Type checker *)
-
 module TypeChecker : sig
   val mk : env -> type_checker
 
@@ -334,3 +341,31 @@ module TypeChecker : sig
 
   val is_def_eq : type_checker -> expr -> expr -> (bool * cnstr_seq)
 end
+
+(* * Declarations *)
+module Decl : sig
+  val mk_axiom    : name -> univ_params:list_name -> ty:expr -> decl
+  val mk_const    : name -> univ_params:list_name -> ty:expr -> decl
+  val mk_def      : name ->
+                    univ_params:list_name -> ty:expr -> value:expr -> height:Unsigned.uint -> normalized:bool
+                    -> decl
+  val mk_def_with : env -> name ->
+                    univ_params:list_name -> ty:expr -> value:expr -> normalized:bool
+                    -> decl                         
+  val mk_thm      : name ->
+                    univ_params:list_name -> ty:expr -> value:expr -> height:Unsigned.uint
+                    -> decl
+  val mk_thm_with : env -> name ->
+                    univ_params:list_name -> ty:expr -> value:expr
+                    -> decl
+  val get_kind        : decl -> decl_kind
+  val get_name        : decl -> name
+  val get_univ_params : decl -> list_name
+  val get_type        : decl -> expr
+  val get_value       : decl -> expr
+  val get_height      : decl -> Unsigned.uint
+  val get_conv_opt    : decl -> bool
+  val check           : env -> decl -> cert_decl
+end
+                
+                       

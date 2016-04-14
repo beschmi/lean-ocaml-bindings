@@ -51,6 +51,13 @@ module Types (F: Cstubs.Types.TYPE) = struct
     let binder_strict_implicit = constant "LEAN_BINDER_STRICT_IMPLICIT" int
     let binder_inst_implicit   = constant "LEAN_BINDER_INST_IMPLICIT"   int
   end
+                         
+  module Decl_kind = struct    
+    let decl_const = constant "LEAN_DECL_CONST" int 
+    let decl_axiom = constant "LEAN_DECL_AXIOM" int 
+    let decl_def   = constant "LEAN_DECL_DEF"   int
+    let decl_thm   = constant "LEAN_DECL_THM"   int
+  end 
 
   let trust_high = constant "LEAN_TRUST_HIGH" int
 
@@ -505,7 +512,9 @@ module Bindings (F : Cstubs.FOREIGN) = struct
 
   let list_expr_del = foreign "lean_list_expr_del" (list_expr @-> returning void)
 
-  let decl_del = foreign "lean_decl_del" (decl @-> returning void) 
+  let decl_del = foreign "lean_decl_del" (decl @-> returning void)
+
+  let cert_decl_del = foreign "lean_cert_decl_del" (cert_decl @-> returning void) 
 
 (* ** Lean environment *)
 
@@ -724,4 +733,42 @@ module Bindings (F : Cstubs.FOREIGN) = struct
     "lean_type_checker_is_def_eq" (type_checker @-> expr @-> expr
       @-> ptr lean_bool @-> ptr cnstr_seq @-> ptr exc @-> ret_bool)
 
+
+  (* ** Lean declarations *)
+  (* FIXME: use Types.TYPE.enum instead to deal with lean_decl_kind<>int *)
+  let decl_kind = int
+
+  let decl_mk_axiom = foreign
+   "lean_decl_mk_axiom" (name @-> list_name @-> expr @-> ptr decl @-> ptr exc @-> ret_bool)
+  let decl_mk_const = foreign
+   "lean_decl_mk_const" (name @-> list_name @-> expr @-> ptr decl @-> ptr exc @-> ret_bool)
+  let decl_mk_def = foreign
+   "lean_decl_mk_def" (name @-> list_name @-> expr @-> expr @-> uint @-> lean_bool @->
+                         ptr decl @-> ptr exc @-> ret_bool)
+  let decl_mk_def_with = foreign
+   "lean_decl_mk_def_with" (env @-> name  @-> list_name @-> expr @-> expr @-> lean_bool @->
+                         ptr decl @-> ptr exc @-> ret_bool)
+  let decl_mk_thm = foreign
+   "lean_decl_mk_thm" (name @-> list_name @-> expr @-> expr @-> uint @->
+                         ptr decl @-> ptr exc @-> ret_bool)
+  let decl_mk_thm_with = foreign
+   "lean_decl_mk_thm_with" (env @-> name  @-> list_name @-> expr @-> expr @->
+                         ptr decl @-> ptr exc @-> ret_bool)
+  let decl_get_kind = foreign
+   "lean_decl_get_kind" (decl @-> returning decl_kind)
+  let decl_get_name = foreign
+   "lean_decl_get_name" (decl @-> ptr name @-> ptr exc @-> ret_bool)
+  let decl_get_univ_params = foreign
+   "lean_decl_get_univ_params" (decl @-> ptr list_name @-> ptr exc @-> ret_bool)
+  let decl_get_type = foreign
+   "lean_decl_get_type" (decl @-> ptr expr @-> ptr exc @-> ret_bool)
+  let decl_get_value = foreign
+   "lean_decl_get_value" (decl @-> ptr expr @-> ptr exc @-> ret_bool)
+  let decl_get_height = foreign
+   "lean_decl_get_height" (decl @-> ptr uint @-> ptr exc @-> ret_bool)
+  let decl_get_conv_opt = foreign
+   "lean_decl_get_conv_opt" (decl @-> ptr lean_bool @-> ptr exc @-> ret_bool)
+  let decl_check = foreign 
+   "lean_decl_check" (env @-> decl @-> ptr cert_decl @-> ptr exc @-> ret_bool)  
 end
+                                         

@@ -193,6 +193,34 @@ let from_binder_kind bk =
     | Binder_inst_implicit   -> binder_inst_implicit
   )
 
+
+                   
+(* * Declaration kinds *)
+
+type decl_kind =
+  | Decl_const
+  | Decl_axiom
+  | Decl_def
+  | Decl_thm
+
+let to_decl_kind c =
+  LeanT.Decl_kind.(
+    if      c = decl_const then Decl_const
+    else if c = decl_axiom then Decl_axiom
+    else if c = decl_def   then Decl_def
+    else if c = decl_thm   then Decl_thm                                 
+    else assert false
+  )
+
+let from_decl_kind dk =
+  LeanT.Decl_kind.(
+    match dk with      
+    | Decl_const -> decl_const 
+    | Decl_axiom -> decl_axiom 
+    | Decl_def   -> decl_def 
+    | Decl_thm   -> decl_thm 
+  )
+
 (* * Finalizers and with_* functions *)
 
 let deref_ptr finaliser e_p =
@@ -223,6 +251,8 @@ let deref_macro_def_ptr       = deref_ptr LeanB.macro_def_del
 let deref_env_ptr             = deref_ptr LeanB.env_del
 
 let deref_decl_ptr            = deref_ptr LeanB.decl_del
+
+let deref_cert_decl_ptr       = deref_ptr LeanB.cert_decl_del
 
 let deref_ios_ptr             = deref_ptr LeanB.ios_del
 
@@ -277,6 +307,7 @@ let with_list_expr = with_wrapper LeanB.list_expr_allocate deref_list_expr_ptr
 let with_macro_def = with_wrapper LeanB.macro_def_allocate deref_macro_def_ptr
 let with_env       = with_wrapper LeanB.env_allocate       deref_env_ptr
 let with_decl      = with_wrapper LeanB.decl_allocate      deref_decl_ptr
+let with_cert_decl = with_wrapper LeanB.cert_decl_allocate deref_cert_decl_ptr
 let with_ios       = with_wrapper LeanB.ios_allocate       deref_ios_ptr
 let with_inductive_type =
                      with_wrapper LeanB.inductive_type_allocate
@@ -579,7 +610,7 @@ module Env =  struct
 
   (* Modules *)
   let import env ios modules = with_env(LeanB.env_import env ios modules)
-  let export env fname = with_unit(LeanB.env_export env fname)
+  let export env ~olean_file = with_unit(LeanB.env_export env olean_file)
 end
                 
 (* * IO state *)
@@ -655,3 +686,27 @@ module TypeChecker = struct
   let whnf  ty_chkr expr      = with_expr_and_cnstr_seq (LeanB.type_checker_whnf  ty_chkr expr)
   let is_def_eq ty_chkr e1 e2 = with_bool_and_cnstr_seq (LeanB.type_checker_is_def_eq ty_chkr e1 e2)
 end 
+
+                       
+(* * Declarations *)
+module Decl = struct
+  let (!) = from_bool
+  let mk_axiom n ~univ_params ~ty = with_decl(LeanB.decl_mk_axiom n univ_params ty)
+  let mk_const n ~univ_params ~ty = with_decl(LeanB.decl_mk_const n univ_params ty)
+  let mk_def n ~univ_params ~ty ~value ~height ~normalized =
+    with_decl(LeanB.decl_mk_def n univ_params ty value height !normalized)
+  let mk_def_with env n ~univ_params ~ty ~value ~normalized =
+    with_decl(LeanB.decl_mk_def_with env n univ_params ty value !normalized)       
+  let mk_thm n ~univ_params ~ty ~value ~height =
+    with_decl(LeanB.decl_mk_thm n univ_params ty value height)
+  let mk_thm_with env n ~univ_params ~ty ~value =
+    with_decl(LeanB.decl_mk_thm_with env n univ_params ty value)
+  let get_kind        decl =                 LeanB.decl_get_kind decl |> to_decl_kind
+  let get_name        decl = with_name(      LeanB.decl_get_name decl)
+  let get_univ_params decl = with_list_name( LeanB.decl_get_univ_params decl)
+  let get_type        decl = with_expr(      LeanB.decl_get_type decl)
+  let get_value       decl = with_expr(      LeanB.decl_get_value decl)
+  let get_height      decl = with_uint(      LeanB.decl_get_height decl)
+  let get_conv_opt    decl = with_bool(      LeanB.decl_get_conv_opt decl)
+  let check       env decl = with_cert_decl( LeanB.decl_check env decl)
+end
