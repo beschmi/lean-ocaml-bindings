@@ -17,7 +17,7 @@ let t_shift,
     t_print,
     t_unshift  =
   let n = ref 1 in
-  let nl () = "\n" ^ (String.make n.contents '>') ^ " " in
+  let nl () = "\n" ^ (String.make n.contents '*') ^ " " in
   let (!) f = f () in
   let open' ?(name="Test") () =
     print_string (!nl ^ name ^ ":");
@@ -208,11 +208,11 @@ let t_internal_parse =
       Module.get_std_path () |> t_print);
     t_unshift();
     
-    let (!) str =
+    let (!:) str =
       Name.mk_str (Name.mk_anon ()) ~str in
     let env =
       let module LN = ListName in
-      Env.import env ios (LN.of_list [!"init"(*; !"data/fin"*)])  in
+      Env.import env ios (LN.of_list [!:"init"(*; !:"data/fin"*)])  in
     (* 'groups.lean' requires 'data.fin' to be imported ;
           both importing it with 'Env.import' or with its own 'import data.fin' line in the .lean file work 
           (the latter option seems to be a little bit faster though) *)
@@ -233,7 +233,7 @@ let t_internal_parse =
     let e0 = mk_var uzero in
     let univ0 = Univ.mk_zero () in
     let prop_sort = mk_sort (univ0) in
-    let p = mk_local !"p" prop_sort in
+    let p = mk_local !:"p" prop_sort in
     let e1 = mk_const (Lean.Name.mk Lean.Name.Anon) (ListUniv.of_list [Univ.mk_zero ()]) in
     let pp_string = to_pp_string env ios in
     t_shift ~name:"Expressions" (); (
@@ -241,10 +241,10 @@ let t_internal_parse =
         string_of_local p |> t_print );
       t_unshift ();
       t_shift ~name:"Decls" (); (
-        let q_decl = Env.get_decl env !"q" in
+        let q_decl = Env.get_decl env !:"q" in
         aeq "Decl.get_kind q_decl = Decl_const" (Decl.get_kind q_decl) Decl_const;
         Decl.get_type q_decl |> Expr.to_string |> t_print;
-        let eq_decl = Env.get_decl env !"eq" in
+        let eq_decl = Env.get_decl env !:"eq" in
         Expr.to_string @@ Decl.get_type eq_decl |> t_print );
       t_unshift ();
       t_shift ~name:"Eqs" (); (
@@ -255,9 +255,10 @@ let t_internal_parse =
         t_unshift ();
         let univs = List.map Univ.mk_param univ_params |> ListUniv.of_list in
         let univ = Univ.instantiate univ0 (ListName.of_list univ_params) univs in
+        Univ.to_string univ |> t_print;
         let sort = Expr.mk_sort univ in
-        let p' = Expr.mk_local !"p'" sort in
-        let env = List.fold_left (fun acc n -> Env.add_univ acc n) env univ_params in
+        let p' = Expr.mk_local !:"p'" sort in
+        let env = List.fold_left Env.add_univ env univ_params in
         Expr.to_string eq_app |> t_print;
         let (<@) = Expr.mk_app in
         let eq_test =  eq_app <@ p' <@ p' in
