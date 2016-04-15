@@ -386,7 +386,7 @@ module ListMake (X : ListBase) = struct
   let tail = X.tail
 
   let rec to_list = function
-    | l when is_cons l -> (head l) :: (to_list l)
+    | l when is_cons l -> (head l) :: (to_list @@ tail l)
     | _ -> []
 
   let rec of_list = function

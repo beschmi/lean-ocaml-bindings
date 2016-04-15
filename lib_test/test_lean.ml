@@ -10,16 +10,18 @@ module F  = Format
 let num_loops = 1000
 
 let aeq m a b = assert_equal ~msg:m a b
+
+let (@<) f g x = f @@ g x
                     
-let t_open,
+let t_shift,
     t_print,
-    t_close  =
-  let n = ref 0 in
+    t_unshift  =
+  let n = ref 1 in
   let nl () = "\n" ^ (String.make n.contents '>') ^ " " in
   let (!) f = f () in
   let open' ?(name="Test") () =
-    incr n;
     print_string (!nl ^ name ^ ":");
+    incr n
   and print' s =
     print_string(!nl ^ s)
   and close' () =
@@ -202,9 +204,9 @@ let t_internal_parse =
     let env = Env.mk_std !!1 in (* with !!0 it may loop at import ... *)
     let options = Options.mk_empty () in
     let ios = Ios.mk_std options in
-    t_open ~name:"LEAN PATH" (); (
+    t_shift ~name:"LEAN PATH" (); (
       Module.get_std_path () |> t_print);
-    t_close();
+    t_unshift();
     
     let (!) str =
       Name.mk_str (Name.mk_anon ()) ~str in
@@ -234,19 +236,40 @@ let t_internal_parse =
     let p = mk_local !"p" prop_sort in
     let e1 = mk_const (Lean.Name.mk Lean.Name.Anon) (ListUniv.of_list [Univ.mk_zero ()]) in
     let pp_string = to_pp_string env ios in
-    t_open ~name:"Expressions" (); (
-      t_open ~name:"Sorts" (); (
+    t_shift ~name:"Expressions" (); (
+      t_shift ~name:"Sorts" (); (
         string_of_local p |> t_print );
-      t_close ();
-      t_open ~name:"Decls" (); (
+      t_unshift ();
+      t_shift ~name:"Decls" (); (
         let q_decl = Env.get_decl env !"q" in
         aeq "Decl.get_kind q_decl = Decl_const" (Decl.get_kind q_decl) Decl_const;
-        Decl.get_type q_decl |> Expr.to_string |> t_print );
-      t_close ();
+        Decl.get_type q_decl |> Expr.to_string |> t_print;
+        let eq_decl = Env.get_decl env !"eq" in
+        Expr.to_string @@ Decl.get_type eq_decl |> t_print );
+      t_unshift ();
+      t_shift ~name:"Eqs" (); (
+        let eq_app,univ_params = Parse.expr env ios "eq" in
+        let univ_params = ListName.to_list univ_params in
+        t_shift ~name:"eq univ_params" (); (
+          List.iter (t_print @< Name.to_string) univ_params );
+        t_unshift ();
+        let univs = List.map Univ.mk_param univ_params |> ListUniv.of_list in
+        let univ = Univ.instantiate univ0 (ListName.of_list univ_params) univs in
+        let sort = Expr.mk_sort univ in
+        let p' = Expr.mk_local !"p'" sort in
+        let env = List.fold_left (fun acc n -> Env.add_univ acc n) env univ_params in
+        Expr.to_string eq_app |> t_print;
+        let (<@) = Expr.mk_app in
+        let eq_test =  eq_app <@ p' <@ p' in
+        pp_string eq_test |> t_print;
+        let ty_chkr = TypeChecker.mk env in
+        (*let eq_test_type,_ = TypeChecker.check ty_chkr eq_test in (* fails here *)
+        Expr.to_string eq_test_type |> t_print*)ignore ty_chkr );
+      t_unshift ();
       aeq "e0 <> e1" false (eq e0 e1);
       aeq "e0 -> #0" "#0" (pp_string e0);
       aeq "e1 -> [anonymous]" "[anonymous]" (pp_string e1) );
-    t_close ()
+    t_unshift ()
     
     
 let _ =
