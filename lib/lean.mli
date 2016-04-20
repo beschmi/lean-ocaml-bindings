@@ -45,11 +45,11 @@ end
 (* * Expression *)
 (* * IO state *)
 module Ios : sig
-  val mk : options:options -> unit -> ios
+  val mk : ?options:options -> unit -> ios
 end
 (* * Environment *)
 module Env : sig
-  val mk : filenames:list_name -> ios -> env
+  val mk : ?filenames:list_name -> ios -> env
 end
 (* * Inductive types *)
 (* * Inductive type list *)
