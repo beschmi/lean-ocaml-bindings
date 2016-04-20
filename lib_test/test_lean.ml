@@ -7,6 +7,74 @@ module F  = Format
 
 (* * Tests: internal *)
 
+(* *** LEAN EXPRESSIONS *** *)
+            
+module type LeanDecls = sig
+  val olean_files : string list
+  val lean_files : string list
+                          
+  val mk_GExp : string
+  val mk_Eq : string
+end
+                          
+module ImportLeanDefs (LD : LeanDecls) : sig
+  type t
+  type _1ary = t -> t
+  type _2ary = t -> t -> t
+  val mk_Eq : _2ary
+  val mk_GExp : _2ary
+end = struct
+  type t = LI.expr
+  type _1ary = t -> t
+  type _2ary = t -> t -> t
+                           
+  let ios = ref (
+    L.Ios.mk ())
+
+  let get_env (env',ios') =
+    ios := ios';
+    env'
+                     
+  let env =
+    let env = L.Env.mk !ios in
+    let module N = L.Name in
+    List.fold_left
+      (fun env_acc filename ->
+        LI.Parse.file env_acc !ios filename |> get_env)
+      (LI.Env.import env !ios
+                     (N.mk_list @@ List.map (fun s -> N.Str s) LD.olean_files))
+      LD.lean_files
+                     
+  let parse_lexpr = LI.Parse.expr env !ios
+  let (<@) = LI.Expr.mk_app
+
+  let get_1ary s =
+    let app = parse_lexpr s |> fst in
+    fun le -> app <@ le (* i.e. (<@) app *)
+                       
+  let get_2ary s : t -> t -> t =
+    let app = parse_lexpr s |> fst in
+    fun le1 le2 -> app <@ le1 <@ le2
+    
+                         
+  let mk_Eq = LD.mk_Eq |> get_2ary
+  let mk_GExp = LD.mk_GExp |> get_2ary
+end
+        
+(* Now that the functor is defined,
+the module only needs to be instanciated with a call to the functor,
+e.g., *)
+
+module LeanExpr =
+  ImportLeanDefs(
+      struct
+        let olean_files = []
+        let lean_files = ["../autognp-lean/expr.lean"]
+        let mk_Eq = "eq"
+        let mk_GExp = "expr.Exp"
+      end)
+        
+              
 let num_loops = 1000
 
 let aeq m a b = assert_equal ~msg:m a b
@@ -182,9 +250,9 @@ let t_list_name =
   let n2 = Name.mk (Name.Str "hello") in
   let n3 = Name.mk Name.Anon in
   let ns = [ n1; n2; n3 ] in
-  let nl = Name.mk_list ns in
+  let nl = LI.ListName.of_list ns in
   let ns1 = List.map Name.view ns in
-  let ns2 = List.map Name.view (Name.view_list nl) in
+  let ns2 = (Name.view_list nl) in
   assert_equal ~msg:"a1" ns1 ns2
 
 let t_internal_expr =
@@ -240,7 +308,7 @@ let t_internal_parse =
     let univ0 = Univ.mk_zero () in
     let prop_sort = mk_sort (univ0) in
     let p = mk_local !:"p" prop_sort in
-    let e1 = mk_const (Lean.Name.mk Lean.Name.Anon) (ListUniv.of_list [Univ.mk_zero ()]) in
+    let e1 = mk_const (L.Name.mk L.Name.Anon) (ListUniv.of_list [Univ.mk_zero ()]) in
     let pp_string = to_pp_string env ios in
     t_shift ~name:"Expressions" (); (
       t_shift ~name:"Sorts" (); (
