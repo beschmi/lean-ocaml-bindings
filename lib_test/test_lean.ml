@@ -9,69 +9,36 @@ module F  = Format
 
 (* *** LEAN EXPRESSIONS *** *)
             
-module type LeanDecls = sig
-  val olean_files : string list
-  val lean_files : string list
-                          
-  val mk_GExp : string
-  val mk_Eq : string
-end
-                          
-module ImportLeanDefs (LD : LeanDecls) : sig
-  type t
-  type _1ary = t -> t
-  type _2ary = t -> t -> t
-  val mk_Eq : _2ary
-  val mk_GExp : _2ary
-end = struct
-  type t = LI.expr
-  type _1ary = t -> t
-  type _2ary = t -> t -> t
-                           
-  let ios = ref (
-    L.Ios.mk ())
+module ImportLeanDefs (LF : L.LeanFiles) = struct
+  module ExprParser = L.GetExprParser(LF)                               
+  open ExprParser
 
-  let get_env (env',ios') =
-    ios := ios';
-    env'
-                     
-  let env =
-    let env = L.Env.mk !ios in
-    let module N = L.Name in
-    List.fold_left
-      (fun env_acc filename ->
-        LI.Parse.file env_acc !ios filename |> get_env)
-      (LI.Env.import env !ios
-                     (N.mk_list @@ List.map (fun s -> N.Str s) LD.olean_files))
-      LD.lean_files
-                     
-  let parse_lexpr = LI.Parse.expr env !ios
-  let (<@) = LI.Expr.mk_app
-
-  let get_1ary s =
-    let app = parse_lexpr s |> fst in
-    fun le -> app <@ le (* i.e. (<@) app *)
-                       
-  let get_2ary s : t -> t -> t =
-    let app = parse_lexpr s |> fst in
-    fun le1 le2 -> app <@ le1 <@ le2
-    
+  let to_string = to_string
                          
-  let mk_Eq = LD.mk_Eq |> get_2ary
-  let mk_GExp = LD.mk_GExp |> get_2ary
+  let mk_Eq   = get "eq"        |> as_2ary
+  let mk_GExp = get "expr.Exp"  |> as_2ary
+  let mk_GGen = get "expr.Ggen"
+
+  let mk_FNat : int -> ExprParser.t =
+    let nat_zero = get "nat.zero" in
+    let nat_succ = get "nat.succ" |> as_1ary in
+    let rec nat_of_int = function
+      | n when n <= 0 -> nat_zero
+      | n -> nat_succ @@ nat_of_int (n-1) in
+    let t_of_nat = get "expr.Fint" |> as_1ary in
+    fun n -> t_of_nat @@ nat_of_int n
+                                    
+  let mk_FPlus = "expr.Fop2" <@ "expr.fop2.Fadd" |> as_2ary
 end
-        
 (* Now that the functor is defined,
 the module only needs to be instanciated with a call to the functor,
 e.g., *)
 
-module LeanExpr =
+module LeanDefs =
   ImportLeanDefs(
       struct
-        let olean_files = []
-        let lean_files = ["../autognp-lean/expr.lean"]
-        let mk_Eq = "eq"
-        let mk_GExp = "expr.Exp"
+        let _olean = []
+        let _lean = ["../autognp-lean/expr.lean"]
       end)
         
               
@@ -312,15 +279,15 @@ let t_internal_parse =
     let pp_string = to_pp_string env ios in
     t_shift ~name:"Expressions" (); (
       t_shift ~name:"Sorts" (); (
-        string_of_local p |> t_print );
-      t_unshift ();
+        string_of_local p |> t_print;
+      ); t_unshift ();
       t_shift ~name:"Decls" (); (
         let q_decl = Env.get_decl env !:"q" in
         aeq "Decl.get_kind q_decl = Decl_const" (Decl.get_kind q_decl) Decl_const;
         Decl.get_type q_decl |> Expr.to_string |> t_print;
         let eq_decl = Env.get_decl env !:"eq" in
-        Expr.to_string @@ Decl.get_type eq_decl |> t_print );
-      t_unshift ();
+        Expr.to_string @@ Decl.get_type eq_decl |> t_print
+      ); t_unshift ();
       t_shift ~name:"Eqs" (); (
         let eq_app,univ_params = Parse.expr env ios "eq" in
         let univ_params = ListName.to_list univ_params in
@@ -339,12 +306,18 @@ let t_internal_parse =
         pp_string eq_test |> t_print;
         let ty_chkr = TypeChecker.mk env in
         (*let eq_test_type,_ = TypeChecker.check ty_chkr eq_test in (* fails here *)
-        Expr.to_string eq_test_type |> t_print*)ignore ty_chkr );
-      t_unshift ();
+        Expr.to_string eq_test_type |> t_print*)ignore ty_chkr;
+      ); t_unshift ();
       aeq "e0 <> e1" false (eq e0 e1);
       aeq "e0 -> #0" "#0" (pp_string e0);
-      aeq "e1 -> [anonymous]" "[anonymous]" (pp_string e1) );
-    t_unshift ()
+      aeq "e1 -> [anonymous]" "[anonymous]" (pp_string e1);
+      t_shift ~name:"New def" (); (
+        let open LeanDefs in
+        t_print @@ to_string @@ mk_Eq
+          (mk_GExp mk_GGen (mk_FPlus (mk_FNat 0) (mk_FNat 4)))
+          (mk_GExp mk_GGen (mk_FPlus (mk_FNat 4) (mk_FNat 0)));
+      ); t_unshift () 
+    ); t_unshift ()
     
     
 let _ =

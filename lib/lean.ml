@@ -86,3 +86,51 @@ end
 (* * Modules *)
 (* * Parser *)
 (* * Type checker *)
+
+(* * EnvParser *)
+module type LeanFiles = sig
+  val _olean : string list
+  val _lean : string list
+end
+
+module GetExprParser (LF : LeanFiles) = struct
+  type t = LI.expr
+  type _1ary = t -> t
+  type _2ary = t -> t -> t
+  type _nary = t list -> t 
+                    
+  let ios = ref @@
+    Ios.mk ()
+
+  let get_env (env',ios') =
+    ios := ios';
+    env'
+                     
+  let env =
+    let env = Env.mk !ios in
+    let module N = Name in
+    List.fold_left
+      (fun env_acc filename ->
+        LI.Parse.file env_acc !ios filename |> get_env)
+      (LI.Env.import env !ios
+                     (List.map (fun s -> N.Str s) LF._olean |> N.mk_list))
+      LF._lean
+
+  let to_string = LI.Expr.to_pp_string env !ios
+  let get s = LI.Parse.expr env !ios s |> fst (* FIXME : (univ_params:list_name) is ignored! ('fst' usage) *)
+                                  
+  let as_nary app =
+    let rec go le = function
+      | [] -> le
+      | x :: xs -> go (LI.Expr.mk_app le x) xs in
+    (* FIXME : catch exception thrown when 'x' cannot be "fed" to 'le', i.e.,
+       when the length of the initial list is greater than the actual arity of 'app' *)
+    go app
+
+  let as_1ary app =
+    fun le -> as_nary app [le]
+  let as_2ary app =
+    fun le1 le2 -> as_nary app [le1; le2]
+
+  let (<@) s1 s2 = LI.Expr.mk_app (get s1) (get s2)
+end

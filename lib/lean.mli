@@ -57,3 +57,27 @@ end
 (* * Modules *)
 (* * Parser *)
 (* * Type checker *)
+
+               
+(* * EnvParser *)
+module type LeanFiles = sig
+  val _olean : string list
+  val _lean : string list
+end
+
+module GetExprParser (LF : LeanFiles) : sig
+  type t
+  (*type _1ary = t -> t
+  type _2ary = t -> t -> t
+  type _nary = t list -> t*)
+
+  val to_string : t -> string
+                           
+  val get     : string -> t
+                            
+  val as_1ary : t -> t -> t
+  val as_2ary : t -> t -> t -> t
+  val as_nary : t -> t list -> t
+
+  val (<@) : string -> string -> t (* "Lean argument feeding" *)
+end
