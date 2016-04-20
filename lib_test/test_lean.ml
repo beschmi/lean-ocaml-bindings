@@ -204,9 +204,15 @@ let t_internal_parse =
     let env = Env.mk_std !!1 in (* with !!0 it may loop at import ... *)
     let options = Options.mk_empty () in
     let ios = Ios.mk_std options in
+    (* 
+                *** LEAN PATH ***
+    remember to set the LEAN_PATH env variable
+    (e.g. to '/usr/local/lib/lean/library/')
+
     t_shift ~name:"LEAN PATH" (); (
       Module.get_std_path () |> t_print);
-    t_unshift();
+    t_unshift(); 
+    *)
     
     let (!:) str =
       Name.mk_str (Name.mk_anon ()) ~str in
