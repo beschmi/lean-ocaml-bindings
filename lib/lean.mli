@@ -36,15 +36,21 @@ module Name : sig
   val view : name -> view
   val mk   : view -> name
 
-  val view_list : list_name -> name list
-  val mk_list   : name list -> list_name
+  val view_list : list_name -> view list
+  val mk_list   : view list -> list_name
 end
 (* * Options *)
 (* * Universe *)
 (* * List of universes *)
 (* * Expression *)
-(* * Environment *)
 (* * IO state *)
+module Ios : sig
+  val mk : options:options -> unit -> ios
+end
+(* * Environment *)
+module Env : sig
+  val mk : filenames:list_name -> ios -> env
+end
 (* * Inductive types *)
 (* * Inductive type list *)
 (* * Inductive declarations *)

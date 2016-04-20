@@ -52,13 +52,13 @@ module Name = struct
       if is_cons nl then (
         let n  = head nl in
         let nl = tail nl in
-        go (n::acc) nl
+        go ((view n)::acc) nl
       ) else ( List.rev acc )
     in
     go [] nl
 
-  let mk_list ns =
-    List.fold_left (fun nl n -> mk_cons n nl) (mk_nil ()) (List.rev ns)
+  let mk_list vs =
+    List.fold_left (fun nl v -> mk_cons (mk v) nl) (mk_nil ()) (List.rev vs)
 
 end
 
@@ -66,8 +66,21 @@ end
 
 (* * Universes *)
 (* * Expression *)
-(* * Environment *)
 (* * IO state *)
+module Ios = struct
+  open LI.Ios         
+  let mk ?(options= LI.Options.mk_empty ()) () =
+    mk_std options
+end
+(* * Environment *)
+module Env = struct
+  open LI.Env
+  let mk ?(filenames = Name.mk_list []) ios =
+    let env = mk_std @@ Unsigned.UInt.of_int 1 in (* FIXME which uint here ? *)
+    let env = import env ios (Name.mk_list [Name.Str "init"]) in
+    let env = import env ios filenames in
+    env
+end
 (* * Inductive types *)
 (* * Inductive declarations *)
 (* * Modules *)
