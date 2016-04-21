@@ -1,6 +1,7 @@
 opam-version: "1.2"
+name:	      "lean"
 maintainer:   "Benedikt Schmidt <beschmi@gmail.com>"
-author:       [ "Benedikt Schmidt <beschmi@gmail.com>",
+author:       [ "Benedikt Schmidt <beschmi@gmail.com>"
                 "Daniel Henry Mantilla <daniel.henry.mantilla@gmail.com>" ]
 version:      "0.0.1"
 
