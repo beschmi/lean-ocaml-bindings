@@ -86,7 +86,33 @@ end
 (* * Modules *)
 (* * Parser *)
 (* * Type checker *)
+(* * Declarations *)
+module Decl = struct
+  let decl_kind_to_string = function
+    | LI.Decl_axiom -> "axiom"
+    | LI.Decl_const -> "constant"
+    | LI.Decl_def -> "definition"
+    | LI.Decl_thm -> "theorem"
 
+  let has_value decl =
+    match LI.Decl.get_kind decl with
+    | LI.Decl_def | LI.Decl_thm -> true
+    | _ -> false
+
+  let get_opt_value decl =
+    if(has_value decl) then Some (LI.Decl.get_value decl)
+    else None
+
+  let opt_value_to_string = function
+    | Some e -> LI.Expr.to_string e
+    | None -> ""
+    
+  let to_string decl =
+    (LI.Decl.get_kind decl |> decl_kind_to_string) ^ " " ^
+      (LI.Decl.get_name decl |> Name.pp) ^ " : " ^
+        (LI.Decl.get_type decl |> LI.Expr.to_string) ^
+          (if has_value decl then " :=\n" ^ (decl |> get_opt_value |> opt_value_to_string) else "")
+end
 (* * EnvParser *)
 module type LeanFiles = sig
   val _olean : string list

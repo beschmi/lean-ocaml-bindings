@@ -58,7 +58,11 @@ end
 (* * Parser *)
 (* * Type checker *)
 
-               
+(* * Declarations *)
+module Decl : sig
+  val to_string : decl -> string
+end
+                
 (* * EnvParser *)
 module type LeanFiles = sig
   val _olean : string list
@@ -66,7 +70,7 @@ module type LeanFiles = sig
 end
 
 module GetExprParser (LF : LeanFiles) : sig
-  type t
+  type t = expr
   (*type _1ary = t -> t
   type _2ary = t -> t -> t
   type _nary = t list -> t*)
