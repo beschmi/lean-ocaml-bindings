@@ -192,8 +192,8 @@ module Expr : sig
   val mk_sort                 : univ                                -> expr
   val mk_const                : name -> list_univ                   -> expr
   val mk_app                  : expr -> expr                        -> expr
-  val mk_lambda               : name -> expr -> expr -> binder_kind -> expr
-  val mk_pi                   : name -> expr -> expr -> binder_kind -> expr
+  val mk_lambda               : name -> ty:expr -> expr -> binder_kind -> expr
+  val mk_pi                   : name -> ty:expr -> expr -> binder_kind -> expr
   val mk_macro                : macro_def -> list_expr              -> expr
   val mk_local                : name -> expr                        -> expr
   val mk_local_ext            : name -> name -> expr -> binder_kind -> expr
