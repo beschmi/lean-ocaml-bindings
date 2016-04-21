@@ -50,7 +50,7 @@ e.g., *)
 module LeanDefs =
   ImportLeanDefs(
       struct
-        let _olean = ["data.nat"]
+        let _olean = ["data/nat"]
         let _lean = ["expr.lean"]
       end)
         
@@ -252,16 +252,6 @@ let t_internal_parse =
     let env = Env.mk_std !!1 in (* with !!0 it may loop at import ... *)
     let options = Options.mk_empty () in
     let ios = Ios.mk_std options in
-    (* 
-                *** LEAN PATH ***
-    remember to set the LEAN_PATH env variable
-    (e.g. to '/usr/local/lib/lean/library/')
-
-    t_shift ~name:"LEAN PATH" (); (
-      Module.get_std_path () |> t_print);
-    t_unshift(); 
-    *)
-    
     let (!:) str =
       Name.mk_str (Name.mk_anon ()) ~str in
     let env =
@@ -343,8 +333,21 @@ let t_internal_parse =
       let open LeanDefs in
     (* Generate a .lean file proof obligation of:
         forall n : nat, g ^ n = g ^ n *)
-      let nat_type = get "nat" in
-      ignore nat_type;
+      let nat_ty = get "nat" in
+      let n = !: "n" in
+      let eq = get "eq" |> as_2ary in
+      let (!!!) = Expr.mk_var @< Unsigned.UInt.of_int in
+      let trivial_eq : expr = eq !!!0 !!!0 in
+      let prop = Expr.mk_lambda n ~ty:nat_ty trivial_eq LI.Binder_default in
+      let proof_obligation = Decl.mk_def_with env !:"proof_obligation"
+                                              ~univ_params:(L.Name.mk_list [])
+                                              ~ty:prop_sort
+                                              ~value:prop
+                                              ~normalized:false in
+      L.Decl.to_string proof_obligation |> t_print;
+      (* FIXME: Can't add declaration to environment because of a metavariable in trivial_eq *)
+      let env = Env.add env (Decl.check env proof_obligation) in
+      Env.export env ~olean_file:"foo.olean";
     ); t_unshift()
     
     
