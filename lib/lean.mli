@@ -72,6 +72,7 @@ module GetExprParser (LF : LeanFiles) : sig
   type _nary = t list -> t*)
 
   val to_string : t -> string
+  val to_pp_string : t -> string
                            
   val get     : string -> t
                             

@@ -14,6 +14,7 @@ module ImportLeanDefs (LF : L.LeanFiles) = struct
   open ExprParser
 
   let to_string = to_string
+  let to_pp_string = to_pp_string
                          
   let mk_Eq   = get "eq"        |> as_2ary
   let mk_GExp = get "expr.Exp"  |> as_2ary
@@ -22,11 +23,13 @@ module ImportLeanDefs (LF : L.LeanFiles) = struct
   let mk_FNat : int -> ExprParser.t =
     let nat_zero = get "nat.zero" in
     let nat_succ = get "nat.succ" |> as_1ary in
-    let rec nat_of_int = function
-      | n when n <= 0 -> nat_zero
-      | n -> nat_succ @@ nat_of_int (n-1) in
-    let t_of_nat = get "expr.Fint" |> as_1ary in
-    fun n -> t_of_nat @@ nat_of_int n
+    let neg_succ_of_nat = get "neg_succ_of_nat" |> as_1ary in
+    let rec lint_of_int = function
+      | 0 -> nat_zero
+      | n when n < 0 -> neg_succ_of_nat @@ lint_of_int (-n - 1)
+      | n -> nat_succ @@ lint_of_int (n-1) in
+    let t_of_lint = get "expr.Fint" |> as_1ary in
+    fun n -> t_of_lint @@ lint_of_int n
                                     
   let mk_FPlus = "expr.Fop2" <@ "expr.fop2.Fadd" |> as_2ary
 end
@@ -38,7 +41,7 @@ module LeanDefs =
   ImportLeanDefs(
       struct
         let _olean = []
-        let _lean = ["../autognp-lean/expr.lean"]
+        let _lean = ["expr.lean"]
       end)
         
               
@@ -313,8 +316,8 @@ let t_internal_parse =
       aeq "e1 -> [anonymous]" "[anonymous]" (pp_string e1);
       t_shift ~name:"New def" (); (
         let open LeanDefs in
-        t_print @@ to_string @@ mk_Eq
-          (mk_GExp mk_GGen (mk_FPlus (mk_FNat 0) (mk_FNat 4)))
+        t_print @@ to_pp_string @@ mk_Eq
+          (mk_GExp mk_GGen (mk_FPlus (mk_FNat (-1)) (mk_FNat 4)))
           (mk_GExp mk_GGen (mk_FPlus (mk_FNat 4) (mk_FNat 0)));
       ); t_unshift () 
     ); t_unshift ()

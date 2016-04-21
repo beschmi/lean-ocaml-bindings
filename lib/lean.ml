@@ -98,6 +98,8 @@ module GetExprParser (LF : LeanFiles) = struct
   type _1ary = t -> t
   type _2ary = t -> t -> t
   type _nary = t list -> t 
+
+  let to_string = LI.Expr.to_string
                     
   let ios = ref @@
     Ios.mk ()
@@ -116,7 +118,7 @@ module GetExprParser (LF : LeanFiles) = struct
                      (List.map (fun s -> N.Str s) LF._olean |> N.mk_list))
       LF._lean
 
-  let to_string = LI.Expr.to_pp_string env !ios
+  let to_pp_string = LI.Expr.to_pp_string env !ios
   let get s = LI.Parse.expr env !ios s |> fst (* FIXME : (univ_params:list_name) is ignored! ('fst' usage) *)
                                   
   let as_nary app =
