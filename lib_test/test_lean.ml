@@ -6,12 +6,22 @@ module L  = Lean
 module F  = Format
 
 (* * Tests: internal *)
-
+              (* The following function uses the unsound Obj.library (avoids static type checking) ;
+it is a quick and dirty way to convert a variant type (e.g. type enum = Foo | Bar) into
+an int (e.g. 0 | 1) as C enums 'naturally' do.
+If the input is not of the right type, it will return -1 *)
+let int_of_kind x =
+  let x = Obj.repr x in
+  if (Obj.is_int x) then
+    Obj.obj x else
+    -1
+              
 (* *** LEAN EXPRESSIONS *** *)
             
 module ImportLeanDefs (LF : L.LeanFiles) = struct
   module ExprParser = L.GetExprParser(LF)                               
-  open ExprParser
+  open ExprParser 
+  let get,as_1ary,as_2ary = get,as_1ary,as_2ary
 
   let to_string = to_string
   let to_pp_string = to_pp_string
@@ -40,7 +50,7 @@ e.g., *)
 module LeanDefs =
   ImportLeanDefs(
       struct
-        let _olean = []
+        let _olean = ["data.nat"]
         let _lean = ["expr.lean"]
       end)
         
@@ -280,6 +290,7 @@ let t_internal_parse =
     let p = mk_local !:"p" prop_sort in
     let e1 = mk_const (L.Name.mk L.Name.Anon) (ListUniv.of_list [Univ.mk_zero ()]) in
     let pp_string = to_pp_string env ios in
+    let t_pp_print = t_print @< pp_string in
     t_shift ~name:"Expressions" (); (
       t_shift ~name:"Sorts" (); (
         string_of_local p |> t_print;
@@ -314,13 +325,27 @@ let t_internal_parse =
       aeq "e0 <> e1" false (eq e0 e1);
       aeq "e0 -> #0" "#0" (pp_string e0);
       aeq "e1 -> [anonymous]" "[anonymous]" (pp_string e1);
+      t_shift ~name:"sorry" (); (
+        let sorry_decl = Env.get_decl env @@ L.Name.mk @@ L.Name.Str "sorry" in
+        let sorry = Parse.expr env ios "sorry" |> fst in
+        Decl.get_kind sorry_decl |> int_of_kind |> string_of_int |> t_print;
+        Decl.get_type sorry_decl |> t_pp_print;
+        (sorry_decl, sorry) |> snd |> t_pp_print;
+      ); t_unshift () ;
       t_shift ~name:"New def" (); (
         let open LeanDefs in
         t_print @@ to_pp_string @@ mk_Eq
           (mk_GExp mk_GGen (mk_FPlus (mk_FNat (-1)) (mk_FNat 4)))
           (mk_GExp mk_GGen (mk_FPlus (mk_FNat 4) (mk_FNat (-1))));
-      ); t_unshift () 
-    ); t_unshift ()
+      ); t_unshift (); 
+    ); t_unshift ();
+    t_shift ~name:"Generating proof obligation" (); (
+      let open LeanDefs in
+    (* Generate a .lean file proof obligation of:
+        forall n : nat, g ^ n = g ^ n *)
+      let nat_type = get "nat" in
+      ignore nat_type;
+    ); t_unshift()
     
     
 let _ =
