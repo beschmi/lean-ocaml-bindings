@@ -2,7 +2,7 @@ OASISFormat:    0.4
 Name:           lean
 Version:        0.0.1
 Synopsis:       OCaml bindings for the Lean prover
-Authors:        Benedikt Schmidt <beschmi@gmail.com>
+Authors:        Benedikt Schmidt <beschmi@gmail.com>, Daniel Henry Mantilla <daniel.henry.mantilla@gmail.com>
 License:        Apache
 Plugins:        DevFiles (0.4), META (0.4)
 BuildTools:     ocamlbuild
