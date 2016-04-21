@@ -318,7 +318,7 @@ let t_internal_parse =
         let open LeanDefs in
         t_print @@ to_pp_string @@ mk_Eq
           (mk_GExp mk_GGen (mk_FPlus (mk_FNat (-1)) (mk_FNat 4)))
-          (mk_GExp mk_GGen (mk_FPlus (mk_FNat 4) (mk_FNat 0)));
+          (mk_GExp mk_GGen (mk_FPlus (mk_FNat 4) (mk_FNat (-1))));
       ); t_unshift () 
     ); t_unshift ()
     
