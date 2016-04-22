@@ -21,7 +21,7 @@ let int_of_kind x =
 module ImportLeanDefs (LF : L.LeanFiles) = struct
   module ExprParser = L.GetExprParser(LF)                               
   open ExprParser 
-  let get,as_1ary,as_2ary = get,as_1ary,as_2ary
+  let get_with_univ_params,get,as_1ary,as_2ary,as_nary = get_with_univ_params,get,as_1ary,as_2ary,as_nary
 
   let to_string = to_string
   let to_pp_string = to_pp_string
@@ -271,7 +271,6 @@ let t_internal_parse =
     let string_of_local e =
       let open LI in
       (Expr.to_pp_string env ios e) ^ " : " ^ (Expr.to_pp_string env ios @@ Expr.get_mlocal_type e) in
-    
     let open LI.Expr in
     let uzero = Unsigned.UInt.of_int 0 in
     let e0 = mk_var uzero in
@@ -281,6 +280,7 @@ let t_internal_parse =
     let e1 = mk_const (L.Name.mk L.Name.Anon) (ListUniv.of_list [Univ.mk_zero ()]) in
     let pp_string = to_pp_string env ios in
     let t_pp_print = t_print @< pp_string in
+
     t_shift ~name:"Expressions" (); (
       t_shift ~name:"Sorts" (); (
         string_of_local p |> t_print;
@@ -329,23 +329,34 @@ let t_internal_parse =
           (mk_GExp mk_GGen (mk_FPlus (mk_FNat 4) (mk_FNat (-1))));
       ); t_unshift (); 
     ); t_unshift ();
+
+    t_shift ~name:"Investigating forall" (); (
+      let expr,_ = Parse.expr env ios "forall (n : nat), eq n n" in
+      expr |> Expr.get_kind |> int_of_kind |> string_of_int |> t_print;
+    ); t_unshift ();
+
     t_shift ~name:"Generating proof obligation" (); (
       let open LeanDefs in
     (* Generate a .lean file proof obligation of:
         forall n : nat, g ^ n = g ^ n *)
       let nat_ty = get "nat" in
       let n = !: "n" in
-      let eq = get "eq" |> as_2ary in
+      let eq,univ_params = get_with_univ_params "@eq.{1}" in
+      let eq = as_nary eq in      
       let (!!!) = Expr.mk_var @< Unsigned.UInt.of_int in
-      let trivial_eq : expr = eq !!!0 !!!0 in
-      let prop = Expr.mk_lambda n ~ty:nat_ty trivial_eq LI.Binder_default in
+      let trivial_eq : expr = eq @@ nat_ty :: !!!0 :: [!!!0] in
+      let prop = Expr.mk_pi n ~ty:nat_ty trivial_eq LI.Binder_default in
+      (*      let eq_univ_params = (Decl.get_univ_params (Env.get_decl env !: "eq")) in*)
+      t_shift ~name:"eq_univ_params" (); (
+        List.iter (t_print @< Name.to_string) (ListName.to_list univ_params);
+      ); t_unshift ();
+      
       let proof_obligation = Decl.mk_def_with env !:"proof_obligation"
-                                              ~univ_params:(L.Name.mk_list [])
+                                              ~univ_params:univ_params
                                               ~ty:prop_sort
                                               ~value:prop
                                               ~normalized:false in
       L.Decl.to_string proof_obligation |> t_print;
-      (* FIXME: Can't add declaration to environment because of a metavariable in trivial_eq *)
       let env = Env.add env (Decl.check env proof_obligation) in
       Env.export env ~olean_file:"foo.olean";
     ); t_unshift()

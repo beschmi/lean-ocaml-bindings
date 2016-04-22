@@ -145,7 +145,9 @@ module GetExprParser (LF : LeanFiles) = struct
       LF._lean
 
   let to_pp_string = LI.Expr.to_pp_string env !ios
-  let get s = LI.Parse.expr env !ios s |> fst (* FIXME : (univ_params:list_name) is ignored! ('fst' usage) *)
+                                          
+  let get_with_univ_params s = LI.Parse.expr env !ios s
+  let get s = fst @@ get_with_univ_params s
                                   
   let as_nary app =
     let rec go le = function

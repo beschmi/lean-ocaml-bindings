@@ -79,7 +79,7 @@ module GetExprParser (LF : LeanFiles) : sig
   val to_pp_string : t -> string
                            
   val get     : string -> t
-                            
+  val get_with_univ_params : string -> t * list_name                            
   val as_1ary : t -> t -> t
   val as_2ary : t -> t -> t -> t
   val as_nary : t -> t list -> t
