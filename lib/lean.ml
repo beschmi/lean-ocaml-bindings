@@ -62,10 +62,33 @@ module Name = struct
 
 end
 
+let (!:) s = Name.mk @@ Name.Str s
+let (@<) f g x = f @@ g x
+                                 
 (* * Options *)
 
 (* * Universes *)
+module Univ = struct
+  open LI.Univ
+  let zero = mk_zero ()
+  let one = mk_succ zero
+  let rec mk = function
+    | i when i <= 0 -> zero
+    | i -> mk @@ i-1
+end
+                
 (* * Expression *)
+module Expr = struct
+  open LI.Expr                                   
+  let bruijn = mk_var @< Unsigned.UInt.of_int                                   
+  let forall (s, ty) (f : expr -> expr) =
+    mk_pi !:s ~ty (f @@ bruijn 0) LI.Binder_default
+
+  let ty_prop = mk_sort Univ.zero
+  let ty_type = mk_sort Univ.one
+  let (|:) s ty = s,ty
+end
+                
 (* * IO state *)
 module Ios = struct
   open LI.Ios         
@@ -102,16 +125,33 @@ module Decl = struct
   let get_opt_value decl =
     if(has_value decl) then Some (LI.Decl.get_value decl)
     else None
-
-  let opt_value_to_string = function
-    | Some e -> LI.Expr.to_string e
-    | None -> ""
     
-  let to_string decl =
+  let expr_to_string ?pp e =
+    match pp with
+      | None -> LI.Expr.to_string e
+      | Some(env,ios) -> LI.Expr.to_pp_string env ios e
+
+  let opt_value_to_string ?pp = function
+    | Some e -> expr_to_string ?pp e
+    | None -> ""
+                
+  let to_string ?pp decl =
     (LI.Decl.get_kind decl |> decl_kind_to_string) ^ " " ^
       (LI.Decl.get_name decl |> Name.pp) ^ " : " ^
-        (LI.Decl.get_type decl |> LI.Expr.to_string) ^
-          (if has_value decl then " :=\n" ^ (decl |> get_opt_value |> opt_value_to_string) else "")
+        (LI.Decl.get_type decl |> expr_to_string ?pp) ^
+          (if has_value decl
+           then " :=\n" ^ (decl |> get_opt_value |> opt_value_to_string ?pp)
+           else "")
+            
+  let mk_cert_def env ~name ?(univ_params = Name.mk_list []) ?(ty = Expr.ty_prop) value =
+    let decl = LI.Decl.mk_def_with
+                 env
+                 !:name
+                 ~univ_params
+                 ~ty
+                 ~value
+                 ~normalized:true (* FIXME : true or false ?? *) in
+    LI.Decl.check env decl
 end
 (* * EnvParser *)
 module type LeanFiles = sig
@@ -130,7 +170,7 @@ module GetExprParser (LF : LeanFiles) = struct
   let ios = ref @@
     Ios.mk ()
 
-  let get_env (env',ios') =
+  let env_of_envios (env',ios') =
     ios := ios';
     env'
                      
@@ -139,7 +179,7 @@ module GetExprParser (LF : LeanFiles) = struct
     let module N = Name in
     List.fold_left
       (fun env_acc filename ->
-        LI.Parse.file env_acc !ios filename |> get_env)
+        LI.Parse.file env_acc !ios filename |> env_of_envios)
       (LI.Env.import env !ios
                      (List.map (fun s -> N.Str s) LF._olean |> N.mk_list))
       LF._lean
@@ -163,4 +203,43 @@ module GetExprParser (LF : LeanFiles) = struct
     fun le1 le2 -> as_nary app [le1; le2]
 
   let (<@) s1 s2 = LI.Expr.mk_app (get s1) (get s2)
+
+  (* Proof obligation generation *)
+  let output_env = ref env
+  let added_proof_obligations : expr list ref = ref []
+  let names_db = Hashtbl.create 1
+  let get_and_incr s =
+    let i = try Hashtbl.find names_db s with Not_found -> 0 in
+    Hashtbl.replace names_db s (i+1);
+    string_of_int (i+1)
+                    
+                                    
+  let gen_unique_name prefix =
+    prefix ^ "_" ^ (get_and_incr prefix)
+                         
+  let add_proof_obligation
+        ?(prefix = "PO")
+        ?(name = gen_unique_name prefix)
+        ?(univ_params = Name.mk_list []) expr =
+    let checked_proof_obligation_decl = Decl.mk_cert_def !output_env
+                                                         ~name
+                                                         ~univ_params                       
+                                                         expr in
+    added_proof_obligations := expr :: !added_proof_obligations;
+    output_env := LI.Env.add !output_env checked_proof_obligation_decl
+
+  let _and = get "and" |> as_2ary
+                            
+  let export_proof_obligations filename =
+    let all_POs = List.rev !added_proof_obligations in
+    let env = !output_env in
+    match all_POs with
+    | po1 :: pos ->
+       let all_POs_expr = List.fold_left _and po1 pos in
+       let all_POs_cert_decl =
+         Decl.mk_cert_def env ~name:"proof_obligation" all_POs_expr in
+       let env = LI.Env.add env all_POs_cert_decl in
+       LI.Env.export env ~olean_file:filename;
+    | _ -> ()
+
 end

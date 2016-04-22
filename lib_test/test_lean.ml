@@ -21,15 +21,17 @@ let int_of_kind x =
 module ImportLeanDefs (LF : L.LeanFiles) = struct
   module ExprParser = L.GetExprParser(LF)                               
   open ExprParser 
-  let get_with_univ_params,get,as_1ary,as_2ary,as_nary = get_with_univ_params,get,as_1ary,as_2ary,as_nary
-
+  let get_with_univ_params,get,as_1ary,as_2ary,as_nary,
+      add_proof_obligation,export_proof_obligations =
+    get_with_univ_params,get,as_1ary,as_2ary,as_nary,add_proof_obligation,export_proof_obligations
+  let (<@) = (<@)
+               
   let to_string = to_string
   let to_pp_string = to_pp_string
                          
   let mk_Eq   = get "eq"        |> as_2ary
   let mk_GExp = get "expr.Exp"  |> as_2ary
   let mk_GGen = get "expr.Ggen"
-
   let mk_FNat : int -> ExprParser.t =
     let nat_zero = get "nat.zero" in
     let nat_succ = get "nat.succ" |> as_1ary in
@@ -39,9 +41,12 @@ module ImportLeanDefs (LF : L.LeanFiles) = struct
       | n when n < 0 -> neg_succ_of_nat @@ lint_of_int (-n - 1)
       | n -> nat_succ @@ lint_of_int (n-1) in
     let t_of_lint = get "expr.Fint" |> as_1ary in
-    fun n -> t_of_lint @@ lint_of_int n
-                                    
+    fun n -> t_of_lint @@ lint_of_int n                                    
   let mk_FPlus = "expr.Fop2" <@ "expr.fop2.Fadd" |> as_2ary
+
+  let lean_eq ~ty e1 e2 =
+    let eq = get "@eq.{1}" |> as_nary in
+    eq [ty; e1; e2]
 end
 (* Now that the functor is defined,
 the module only needs to be instanciated with a call to the functor,
@@ -329,36 +334,19 @@ let t_internal_parse =
           (mk_GExp mk_GGen (mk_FPlus (mk_FNat 4) (mk_FNat (-1))));
       ); t_unshift (); 
     ); t_unshift ();
-
-    t_shift ~name:"Investigating forall" (); (
-      let expr,_ = Parse.expr env ios "forall (n : nat), eq n n" in
-      expr |> Expr.get_kind |> int_of_kind |> string_of_int |> t_print;
-    ); t_unshift ();
-
+    
     t_shift ~name:"Generating proof obligation" (); (
       let open LeanDefs in
     (* Generate a .lean file proof obligation of:
         forall n : nat, g ^ n = g ^ n *)
       let nat_ty = get "nat" in
-      let n = !: "n" in
-      let eq,univ_params = get_with_univ_params "@eq.{1}" in
-      let eq = as_nary eq in      
-      let (!!!) = Expr.mk_var @< Unsigned.UInt.of_int in
-      let trivial_eq : expr = eq @@ nat_ty :: !!!0 :: [!!!0] in
-      let prop = Expr.mk_pi n ~ty:nat_ty trivial_eq LI.Binder_default in
-      (*      let eq_univ_params = (Decl.get_univ_params (Env.get_decl env !: "eq")) in*)
-      t_shift ~name:"eq_univ_params" (); (
-        List.iter (t_print @< Name.to_string) (ListName.to_list univ_params);
-      ); t_unshift ();
-      
-      let proof_obligation = Decl.mk_def_with env !:"proof_obligation"
-                                              ~univ_params:univ_params
-                                              ~ty:prop_sort
-                                              ~value:prop
-                                              ~normalized:false in
-      L.Decl.to_string proof_obligation |> t_print;
-      let env = Env.add env (Decl.check env proof_obligation) in
-      Env.export env ~olean_file:"foo.olean";
+      let g_ty = "expr" <@ "ty.Grp" in
+      let forall_n_eq_n_n =
+        let open L.Expr in
+        forall ("n" |: nat_ty) (fun n -> lean_eq ~ty:nat_ty n n) in
+      LeanDefs.add_proof_obligation forall_n_eq_n_n;
+      LeanDefs.add_proof_obligation (lean_eq ~ty:g_ty mk_GGen mk_GGen);      
+      LeanDefs.export_proof_obligations "foo.olean"; 
     ); t_unshift()
     
     
