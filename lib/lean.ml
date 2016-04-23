@@ -1,26 +1,30 @@
+
+(* * Lean (high-level) interface *)
 open Ctypes
 
 module LI = LeanInternal
 
+(* ** Types *)
 
-type name                = LeanInternal.name
-type list_name           = LeanInternal.list_name
-type options             = LeanInternal.options
-type univ                = LeanInternal.univ
-type list_univ           = LeanInternal.list_univ
-type ios                 = LeanInternal.ios
-type env                 = LeanInternal.env
-type decl                = LeanInternal.decl
-type cert_decl           = LeanInternal.cert_decl
-type expr                = LeanInternal.expr
-type list_expr           = LeanInternal.list_expr
-type macro_def           = LeanInternal.macro_def
-type inductive_type      = LeanInternal.inductive_type
-type list_inductive_type = LeanInternal.list_inductive_type
-type inductive_decl      = LeanInternal.inductive_decl
-type type_checker        = LeanInternal.type_checker
-type cnstr_seq           = LeanInternal.cnstr_seq
+type name                = LI.name
+type list_name           = LI.list_name
+type options             = LI.options
+type univ                = LI.univ
+type list_univ           = LI.list_univ
+type ios                 = LI.ios
+type env                 = LI.env
+type decl                = LI.decl
+type cert_decl           = LI.cert_decl
+type expr                = LI.expr
+type list_expr           = LI.list_expr
+type macro_def           = LI.macro_def
+type inductive_type      = LI.ind_type
+type list_inductive_type = LI.list_ind_type
+type inductive_decl      = LI.ind_decl
+type type_checker        = LI.type_checker
+type cnstr_seq           = LI.cnstr_seq
 
+(* ** Name *)
 
 module Name = struct
 
@@ -65,9 +69,9 @@ end
 let (!:) s = Name.mk @@ Name.Str s
 let (@<) f g x = f @@ g x
                                  
-(* * Options *)
+(* ** Option *)
+(* ** Universe *)
 
-(* * Universes *)
 module Univ = struct
   open LI.Univ
   let zero = mk_zero ()
@@ -77,7 +81,8 @@ module Univ = struct
     | i -> mk @@ i-1
 end
                 
-(* * Expression *)
+(* ** Expression *)
+
 module Expr = struct
   open LI.Expr                                   
   let bruijn = mk_var @< Unsigned.UInt.of_int                                   
@@ -89,13 +94,16 @@ module Expr = struct
   let (|:) s ty = s,ty
 end
                 
-(* * IO state *)
+(* ** IO state *)
+
 module Ios = struct
   open LI.Ios         
   let mk ?(options= LI.Options.mk_empty ()) () =
     mk_std options
 end
-(* * Environment *)
+
+(* ** Environment *)
+
 module Env = struct
   open LI.Env
   let mk ?(filenames = Name.mk_list []) ios =
@@ -104,12 +112,14 @@ module Env = struct
     let env = import env ios filenames in
     env
 end
-(* * Inductive types *)
-(* * Inductive declarations *)
-(* * Modules *)
-(* * Parser *)
-(* * Type checker *)
-(* * Declarations *)
+
+(* ** Inductive types *)
+(* ** Inductive declarations *)
+(* ** Modules *)
+(* ** Parser *)
+(* ** Type checker *)
+(* ** Declaration *)
+
 module Decl = struct
   let decl_kind_to_string = function
     | LI.Decl_axiom -> "axiom"
@@ -153,7 +163,9 @@ module Decl = struct
                  ~normalized:true (* FIXME : true or false ?? *) in
     LI.Decl.check env decl
 end
-(* * EnvParser *)
+
+(* ** EnvParser *)
+
 module type LeanFiles = sig
   val _olean : string list
   val _lean : string list
@@ -220,11 +232,11 @@ module GetExprParser (LF : LeanFiles) = struct
   let add_proof_obligation
         ?(prefix = "PO")
         ?(name = gen_unique_name prefix)
-        ?(univ_params = Name.mk_list []) expr =
-    let checked_proof_obligation_decl = Decl.mk_cert_def !output_env
-                                                         ~name
-                                                         ~univ_params                       
-                                                         expr in
+        ?(univ_params = Name.mk_list [])
+        expr =
+    let checked_proof_obligation_decl =
+      Decl.mk_cert_def !output_env ~name ~univ_params expr
+    in
     added_proof_obligations := expr :: !added_proof_obligations;
     output_env := LI.Env.add !output_env checked_proof_obligation_decl
 

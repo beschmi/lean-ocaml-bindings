@@ -1,6 +1,7 @@
+(* * Lean internals *)
 open Ffi_bindings
 
-(* * Lean types *)
+(* ** Lean types *)
 
 type name
 type list_name
@@ -14,13 +15,13 @@ type cert_decl
 type expr
 type list_expr
 type macro_def
-type inductive_type
-type list_inductive_type
-type inductive_decl
+type ind_type
+type list_ind_type
+type ind_decl
 type type_checker
 type cnstr_seq
 
-(* * Exception *)
+(* ** Exception *)
 
 type exc_kind =
   | Null_Exception
@@ -33,7 +34,7 @@ type exc_kind =
   | Parser_Exception
   | Other_Exception
 
-(* * Universe kinds *)
+(* ** Universe kinds *)
 
 type univ_kind =
   | Univ_Zero
@@ -44,7 +45,7 @@ type univ_kind =
   | Univ_Global
   | Univ_Meta
 
-(* * Expression kinds *)
+(* ** Expression kinds *)
 
 type expr_kind =
   | Expr_var
@@ -58,7 +59,7 @@ type expr_kind =
   | Expr_let
   | Expr_macro
 
-(* * Binder kinds *)
+(* ** Binder kinds *)
 
 type binder_kind =
   | Binder_default
@@ -66,7 +67,7 @@ type binder_kind =
   | Binder_strict_implicit
   | Binder_inst_implicit
 
-(* * Declaration kinds *)
+(* ** Declaration kinds *)
 
 type decl_kind =
   | Decl_const
@@ -74,16 +75,12 @@ type decl_kind =
   | Decl_def
   | Decl_thm
 
-(* General List module type signature *)
+(* ** Module for list types *)
+
 module type List = sig
   type t
   type list_t
 
-  val to_list : list_t -> t list
-  val of_list : t list -> list_t
-  val ( @: ) : t -> list_t -> list_t
-  val ( ! ) : t -> list_t
-         
   val mk_nil  : unit -> list_t
   val mk_cons : t -> list_t -> list_t
 
@@ -91,9 +88,15 @@ module type List = sig
   val eq      : list_t -> list_t -> bool
   val head    : list_t -> t
   val tail    : list_t -> list_t
+
+  val to_list : list_t -> t list
+  val of_list : t list -> list_t
+
+  val ( @: )  : t -> list_t -> list_t
+  val ( ! )   : t -> list_t         
 end
          
-(* * Names *)
+(* ** Names *)
 
 module Name : sig
   val mk_anon : unit -> name
@@ -115,10 +118,10 @@ module Name : sig
 end
 
 module ListName : List with
-         type t = name and
-         type list_t = list_name
+  type t = name and
+  type list_t = list_name
 
-(* * Options *)
+(* ** Options *)
 
 module Options : sig
 
@@ -147,30 +150,29 @@ module Options : sig
 
 end
 
-(* * Universe *)
+(* ** Universe *)
 
 module Univ : sig
 
-  val mk_zero : unit -> univ
-  val mk_succ : univ -> univ
-  val mk_max  : univ -> univ -> univ
-  val mk_imax : univ -> univ -> univ
+  val mk_zero   : unit -> univ
+  val mk_succ   : univ -> univ
+  val mk_max    : univ -> univ -> univ
+  val mk_imax   : univ -> univ -> univ
   val mk_param  : name -> univ
   val mk_global : name -> univ
   val mk_meta   : name -> univ
 
-  val get_pred : univ -> univ
+  val get_pred    : univ -> univ
   val get_max_lhs : univ -> univ
   val get_max_rhs : univ -> univ
-  val normalize : univ -> univ
+  val normalize   : univ -> univ
 
-  val eq : univ -> univ -> bool
-  val lt : univ -> univ -> bool
+  val eq       : univ -> univ -> bool
+  val lt       : univ -> univ -> bool
   val quick_lt : univ -> univ -> bool
-  val geq : univ -> univ -> bool
+  val geq      : univ -> univ -> bool
 
-  val to_string : univ -> string
-
+  val to_string       : univ -> string
   val to_string_using : univ -> options -> string
 
   val kind : univ -> univ_kind
@@ -180,36 +182,33 @@ module Univ : sig
   val instantiate : univ -> list_name -> list_univ -> univ
 end
 
-(* * List of universes *)
 module ListUniv : List with
-         type t = univ and
-         type list_t = list_univ
+  type t = univ and
+  type list_t = list_univ
                          
-(* * Expression *)
+(* ** Expression *)
 
 module Expr : sig
-  val mk_var                  : Unsigned.uint                       -> expr
-  val mk_sort                 : univ                                -> expr
-  val mk_const                : name -> list_univ                   -> expr
-  val mk_app                  : expr -> expr                        -> expr
-  val mk_lambda               : name -> ty:expr -> expr -> binder_kind -> expr
-  val mk_pi                   : name -> ty:expr -> expr -> binder_kind -> expr
-  val mk_macro                : macro_def -> list_expr              -> expr
-  val mk_local                : name -> expr                        -> expr
-  val mk_local_ext            : name -> name -> expr -> binder_kind -> expr
-  val mk_metavar              : name -> expr                        -> expr
+  val mk_var       : Unsigned.uint                          -> expr
+  val mk_sort      : univ                                   -> expr
+  val mk_const     : name -> list_univ                      -> expr
+  val mk_app       : expr -> expr                           -> expr
+  val mk_lambda    : name -> ty:expr -> expr -> binder_kind -> expr
+  val mk_pi        : name -> ty:expr -> expr -> binder_kind -> expr
+  val mk_macro     : macro_def -> list_expr                 -> expr
+  val mk_local     : name -> expr                           -> expr
+  val mk_local_ext : name -> name -> expr -> binder_kind    -> expr
+  val mk_metavar   : name -> expr                           -> expr
 
-  (*val macro_def_del         : macro_def -> unit*)
+  val macro_def_eq        : macro_def -> macro_def -> bool
+  val macro_def_to_string : macro_def -> string
 
-  val macro_def_eq            : macro_def -> macro_def -> bool
-  val macro_def_to_string     : macro_def -> string
-
-  val to_string               : expr -> string
-  val get_kind                : expr -> expr_kind
+  val to_string : expr -> string
+  val get_kind  : expr -> expr_kind
                            
-  val eq                      : expr -> expr -> bool
-  val lt                      : expr -> expr -> bool
-  val quick_lt                : expr -> expr -> bool
+  val eq       : expr -> expr -> bool
+  val lt       : expr -> expr -> bool
+  val quick_lt : expr -> expr -> bool
 
   val get_var_idx             : expr -> Unsigned.uint
   val get_sort_univ           : expr -> univ
@@ -229,54 +228,52 @@ module Expr : sig
   val get_macro_args          : expr -> list_expr
 
   val to_pp_string : env -> ios -> expr -> string
+
+  (*val macro_def_del         : macro_def -> unit*)
 end
 
 module ListExpr : List with
-         type t = expr and
-         type list_t = list_expr
+  type t = expr and
+  type list_t = list_expr
                        
-(* * Environment *)
+(* ** Environment *)
+
 module Env : sig
   val mk_std         : Unsigned.uint -> env
   val mk_hott        : Unsigned.uint -> env
 
-  val add_univ       : env -> name -> env
-  val add            : env -> cert_decl -> env
-  val replace        : env -> cert_decl -> env
+  val add_univ : env -> name -> env
+  val add      : env -> cert_decl -> env
+  val replace  : env -> cert_decl -> env
 
-  val trust_level    : env -> Unsigned.uint
-  val proof_irrel    : env -> bool
-  val impredicative  : env -> bool
+  val trust_level   : env -> Unsigned.uint
+  val proof_irrel   : env -> bool
+  val impredicative : env -> bool
 
   val contains_univ : env -> name -> bool
-  val contains_decl  : env -> name -> bool
+  val contains_decl : env -> name -> bool
 
-  val get_decl       : env -> name -> decl
-  val is_descendant  : env -> env -> bool
-  val forget         : env -> env
+  val get_decl      : env -> name -> decl
+  val is_descendant : env -> env -> bool
+  val forget        : env -> env
 
-(* FIXME: deal with callbacks into ocaml
-  val for_each_decl
-
-  val for_each_univ 
- *)
   (* Inductives *)
-  val add_inductive                         : env -> inductive_decl -> env
-  val is_inductive_type                     : env -> name ->           inductive_decl
-  val is_constructor                        : env -> name ->           name
-  val is_recursor                           : env -> name ->           name
+  val add_ind        : env -> ind_decl -> env
+  val is_ind_type    : env -> name -> ind_decl
+  val is_constructor : env -> name -> name
+  val is_recursor    : env -> name -> name
 
-  val get_inductive_type_num_indices        : env -> name ->           Unsigned.uint
-  val get_inductive_type_num_minor_premises : env -> name ->           Unsigned.uint
-  val get_inductive_type_num_type_formers   : env -> name ->           Unsigned.uint
-  val get_inductive_type_has_dep_elim       : env -> name ->           bool
+  val get_ind_type_num_indices        : env -> name -> Unsigned.uint
+  val get_ind_type_num_minor_premises : env -> name -> Unsigned.uint
+  val get_ind_type_num_type_formers   : env -> name -> Unsigned.uint
+  val get_ind_type_has_dep_elim       : env -> name -> bool
 
   (* Modules *)
   val import : env -> ios -> list_name -> env
   val export : env -> olean_file:string -> unit
 end
                
-(* * IO state *)
+(* ** IO state *)
 
 module Ios : sig
   val mk_std           : options -> ios
@@ -289,49 +286,49 @@ module Ios : sig
   val get_diagnostic   : ios -> string
   val reset_regular    : ios -> unit
   val reset_diagnostic : ios -> unit
-
-  (* FIXME : exception in input 
-  val exception_to_pp_string : env -> ios -> exc -> string *)               
 end
                
-(* * Inductive types *)
-module InductiveType : sig
-  val mk                : name -> expr -> list_expr -> inductive_type
+(* ** Inductive types *)
+
+module IndType : sig
+  val mk                : name -> expr -> list_expr -> ind_type
   val get_recursor_name : name -> name
 
-  val get_name          : inductive_type -> name
-  val get_type          : inductive_type -> expr
-  val get_constructors  : inductive_type -> list_expr                                       
+  val get_name          : ind_type -> name
+  val get_type          : ind_type -> expr
+  val get_constructors  : ind_type -> list_expr                                       
 end
                          
-(* * Inductive type list *)
-module ListInductiveType : List with
-         type t = inductive_type and
-         type list_t = list_inductive_type
+module ListIndType : List with
+  type t = ind_type and
+  type list_t = list_ind_type
                              
-(* * Inductive declarations *)
-module InductiveDecl : sig
-  val mk              : list_name -> Unsigned.uint -> list_inductive_type -> inductive_decl
-                                                                  
-  val get_univ_params : inductive_decl -> list_name
-  val get_num_params  : inductive_decl -> Unsigned.uint 
-  val get_types       : inductive_decl -> list_inductive_type
+(* ** Inductive declarations *)
+
+module IndDecl : sig
+  val mk              : list_name -> Unsigned.uint -> list_ind_type -> ind_decl
+  val get_univ_params : ind_decl -> list_name
+  val get_num_params  : ind_decl -> Unsigned.uint 
+  val get_types       : ind_decl -> list_ind_type
 end
                          
-(* * Modules *)
+(* ** Modules *)
+
 module Module : sig
-  val get_std_path : unit -> string
+  val get_std_path  : unit -> string
   val get_hott_path : unit -> string
 end
                   
-(* * Parser *)
+(* ** Parser *)
+
 module Parse : sig
   val file : env -> ios -> string -> env * ios
   val commands : env -> ios -> string -> env * ios
   val expr : env -> ios -> string -> expr * list_name
 end
                   
-(* * Type checker *)
+(* ** Type checker *)
+
 module TypeChecker : sig
   val mk : env -> type_checker
 
@@ -342,22 +339,23 @@ module TypeChecker : sig
   val is_def_eq : type_checker -> expr -> expr -> (bool * cnstr_seq)
 end
 
-(* * Declarations *)
+(* ** Declarations *)
+
 module Decl : sig
-  val mk_axiom    : name -> univ_params:list_name -> ty:expr -> decl
-  val mk_const    : name -> univ_params:list_name -> ty:expr -> decl
-  val mk_def      : name ->
-                    univ_params:list_name -> ty:expr -> value:expr -> height:Unsigned.uint -> normalized:bool
+  val mk_axiom : name -> univ_params:list_name -> ty:expr -> decl
+  val mk_const : name -> univ_params:list_name -> ty:expr -> decl
+  val mk_def   : name -> univ_params:list_name -> ty:expr -> value:expr
+                 -> height:Unsigned.uint -> normalized:bool -> decl
+
+  val mk_def_with : env -> name -> univ_params:list_name -> ty:expr -> value:expr
+                    -> normalized:bool -> decl                         
+
+  val mk_thm      : name -> univ_params:list_name -> ty:expr -> value:expr
+                    -> height:Unsigned.uint -> decl
+
+  val mk_thm_with : env -> name -> univ_params:list_name -> ty:expr -> value:expr
                     -> decl
-  val mk_def_with : env -> name ->
-                    univ_params:list_name -> ty:expr -> value:expr -> normalized:bool
-                    -> decl                         
-  val mk_thm      : name ->
-                    univ_params:list_name -> ty:expr -> value:expr -> height:Unsigned.uint
-                    -> decl
-  val mk_thm_with : env -> name ->
-                    univ_params:list_name -> ty:expr -> value:expr
-                    -> decl
+
   val get_kind        : decl -> decl_kind
   val get_name        : decl -> name
   val get_univ_params : decl -> list_name

@@ -1,6 +1,7 @@
+(* * Bindings for Lean *)
 open Ctypes
 
-(* * Types module *)
+(* ** Types module *)
 
 module Types (F: Cstubs.Types.TYPE) = struct
   open F
@@ -63,7 +64,7 @@ module Types (F: Cstubs.Types.TYPE) = struct
 
 end
 
-(* * Bindings module *)
+(* ** Bindings module *)
 
 module Bindings (F : Cstubs.FOREIGN) = struct
   open F
@@ -76,10 +77,8 @@ module Bindings (F : Cstubs.FOREIGN) = struct
   let uint_allocate   () = allocate uint (Unsigned.UInt.of_int 0)
   let double_allocate () = allocate double 0.0
   let int_allocate    () = allocate int 0
-  (*let unit_allocate   () = allocate void ()*)
-                                    
-
-(* ** Typedefs *)
+ 
+(* *** Typedefs *)
 
   module Typedef (TN : sig val type_name : string end) : sig
     type t
@@ -97,90 +96,90 @@ module Bindings (F : Cstubs.FOREIGN) = struct
       allocate ?finalise t null
   end
 
-  module Exception           = Typedef(struct let type_name = "lean_exception"           end)
+  module Exception     = Typedef(struct let type_name = "lean_exception"           end)
 
-  module Name                = Typedef(struct let type_name = "lean_name"                end)
-  module List_name           = Typedef(struct let type_name = "lean_list_name"           end)
+  module Name          = Typedef(struct let type_name = "lean_name"                end)
+  module List_name     = Typedef(struct let type_name = "lean_list_name"           end)
 
-  module Univ                = Typedef(struct let type_name = "lean_univ"                end)
-  module List_univ           = Typedef(struct let type_name = "lean_list_univ"           end)
+  module Univ          = Typedef(struct let type_name = "lean_univ"                end)
+  module List_univ     = Typedef(struct let type_name = "lean_list_univ"           end)
 
-  module Options             = Typedef(struct let type_name = "lean_options"             end)
+  module Options       = Typedef(struct let type_name = "lean_options"             end)
 
-  module Ios                 = Typedef(struct let type_name = "lean_ios"                 end)
+  module Ios           = Typedef(struct let type_name = "lean_ios"                 end)
 
-  module Env                 = Typedef(struct let type_name = "lean_env"                 end)
-  module Decl                = Typedef(struct let type_name = "lean_decl"                end)
-  module Cert_decl           = Typedef(struct let type_name = "lean_cert_decl"           end)
+  module Env           = Typedef(struct let type_name = "lean_env"                 end)
+  module Decl          = Typedef(struct let type_name = "lean_decl"                end)
+  module Cert_decl     = Typedef(struct let type_name = "lean_cert_decl"           end)
 
-  module Expr                = Typedef(struct let type_name = "lean_expr"                end)
-  module List_expr           = Typedef(struct let type_name = "lean_list_expr"           end)
-  module Macro_def           = Typedef(struct let type_name = "lean_macro_def"           end)
+  module Expr          = Typedef(struct let type_name = "lean_expr"                end)
+  module List_expr     = Typedef(struct let type_name = "lean_list_expr"           end)
+  module Macro_def     = Typedef(struct let type_name = "lean_macro_def"           end)
 
-  module Inductive_type      = Typedef(struct let type_name = "lean_inductive_type"      end)
-  module List_inductive_type = Typedef(struct let type_name = "lean_list_inductive_type" end)
-  module Inductive_decl      = Typedef(struct let type_name = "lean_inductive_decl"      end)
+  module Ind_type      = Typedef(struct let type_name = "lean_inductive_type"      end)
+  module List_ind_type = Typedef(struct let type_name = "lean_list_inductive_type" end)
+  module Ind_decl      = Typedef(struct let type_name = "lean_inductive_decl"      end)
 
-  module Type_checker        = Typedef(struct let type_name = "lean_type_checker"        end)
-  module Cnstr_seq           = Typedef(struct let type_name = "lean_cnstr_seq"           end)
-
-
-  let exc                 = Exception.t
-
-  let name                = Name.t
-  let list_name           = List_name.t
-
-  let univ                = Univ.t
-  let list_univ           = List_univ.t
-
-  let options             = Options.t
-
-  let ios                 = Ios.t
-
-  let env                 = Env.t
-  let decl                = Decl.t
-  let cert_decl           = Cert_decl.t
-
-  let expr                = Expr.t
-  let list_expr           = List_expr.t
-  let macro_def           = Macro_def.t
-
-  let inductive_type      = Inductive_type.t
-  let list_inductive_type = List_inductive_type.t
-  let inductive_decl      = Inductive_decl.t
-
-  let type_checker        = Type_checker.t
-  let cnstr_seq           = Cnstr_seq.t
+  module Type_checker  = Typedef(struct let type_name = "lean_type_checker"        end)
+  module Cnstr_seq     = Typedef(struct let type_name = "lean_cnstr_seq"           end)
 
 
-  let exception_allocate           = Exception.allocate
+  let exc                    = Exception.t
 
-  let name_allocate                = Name.allocate
-  let list_name_allocate           = List_name.allocate
+  let name                   = Name.t
+  let list_name              = List_name.t
 
-  let univ_allocate                = Univ.allocate
-  let list_univ_allocate           = List_univ.allocate
+  let univ                   = Univ.t
+  let list_univ              = List_univ.t
 
-  let options_allocate             = Options.allocate
+  let options                = Options.t
 
-  let ios_allocate                 = Ios.allocate
+  let ios                    = Ios.t
 
-  let env_allocate                 = Env.allocate
-  let decl_allocate                = Decl.allocate
-  let cert_decl_allocate           = Cert_decl.allocate
+  let env                    = Env.t
+  let decl                   = Decl.t
+  let cert_decl              = Cert_decl.t
 
-  let expr_allocate                = Expr.allocate
-  let list_expr_allocate           = List_expr.allocate
-  let macro_def_allocate           = Macro_def.allocate
+  let expr                   = Expr.t
+  let list_expr              = List_expr.t
+  let macro_def              = Macro_def.t
 
-  let inductive_type_allocate      = Inductive_type.allocate
-  let list_inductive_type_allocate = List_inductive_type.allocate
-  let inductive_decl_allocate      = Inductive_decl.allocate
+  let ind_type               = Ind_type.t
+  let list_ind_type          = List_ind_type.t
+  let ind_decl               = Ind_decl.t
 
-  let type_checker_allocate        = Type_checker.allocate
-  let cnstr_seq_allocate           = Cnstr_seq.allocate
+  let type_checker           = Type_checker.t
+  let cnstr_seq              = Cnstr_seq.t
 
-(* ** Lean strings (strings returned by lean) *)
+
+  let exception_allocate     = Exception.allocate
+
+  let name_allocate          = Name.allocate
+  let list_name_allocate     = List_name.allocate
+
+  let univ_allocate          = Univ.allocate
+  let list_univ_allocate     = List_univ.allocate
+
+  let options_allocate       = Options.allocate
+
+  let ios_allocate           = Ios.allocate
+
+  let env_allocate           = Env.allocate
+  let decl_allocate          = Decl.allocate
+  let cert_decl_allocate     = Cert_decl.allocate
+
+  let expr_allocate          = Expr.allocate
+  let list_expr_allocate     = List_expr.allocate
+  let macro_def_allocate     = Macro_def.allocate
+
+  let ind_type_allocate      = Ind_type.allocate
+  let list_ind_type_allocate = List_ind_type.allocate
+  let ind_decl_allocate      = Ind_decl.allocate
+
+  let type_checker_allocate  = Type_checker.allocate
+  let cnstr_seq_allocate     = Cnstr_seq.allocate
+
+(* *** Lean strings (strings returned by lean) *)
 
   let lean_string = typedef (ptr char) "const char*"
 
@@ -188,7 +187,7 @@ module Bindings (F : Cstubs.FOREIGN) = struct
 
   let string_allocate () = allocate lean_string (from_voidp char null)
 
-(* ** Lean exceptions *)
+(* *** Lean exceptions *)
 
   (* FIXME: use Types.TYPE.enum instead to deal with exception_kind<>int *)
   let exception_kind = int
@@ -204,7 +203,7 @@ module Bindings (F : Cstubs.FOREIGN) = struct
 
   let exception_get_kind = foreign "lean_exception_get_kind" (exc @-> returning exception_kind)
 
-(* ** Lean names *)
+(* *** Lean names *)
 
   let name_del = foreign "lean_name_del" (name @-> returning void)
 
@@ -241,7 +240,7 @@ module Bindings (F : Cstubs.FOREIGN) = struct
   let name_to_string = foreign
     "lean_name_to_string" (name @-> ptr lean_string @-> ptr exc @-> ret_bool)
 
-(* ** Lean list name *)
+(* *** Lean list name *)
 
   let list_name_mk_nil = foreign
     "lean_list_name_mk_nil" (ptr list_name @-> ptr exc @-> ret_bool)
@@ -262,7 +261,7 @@ module Bindings (F : Cstubs.FOREIGN) = struct
   let list_name_tail = foreign
     "lean_list_name_tail" (list_name @-> ptr list_name @-> ptr exc @-> ret_bool)
 
-(* ** Lean options *)
+(* *** Lean options *)
 
   let options_mk_empty = foreign "lean_options_mk_empty" (ptr options @-> ptr exc @-> ret_bool)
 
@@ -310,7 +309,7 @@ module Bindings (F : Cstubs.FOREIGN) = struct
   let options_to_string = foreign
     "lean_options_to_string" (options @-> ptr lean_string @-> ptr exc @-> ret_bool)
 
-(* ** Lean universe *)
+(* *** Lean universe *)
 
   (* FIXME: use Types.TYPE.enum instead to deal with lean_univ_kind<>int *)
   let univ_kind = int
@@ -361,7 +360,7 @@ module Bindings (F : Cstubs.FOREIGN) = struct
 
   let univ_normalize = foreign "lean_univ_normalize" (univ @-> ptr univ @-> ptr exc @-> ret_bool)
 
-(* ** Lean universe list *)
+(* *** Lean universe list *)
 
   let list_univ_mk_nil = foreign "lean_list_univ_mk_nil" (ptr list_univ @-> ptr exc @-> ret_bool)
 
@@ -384,7 +383,7 @@ module Bindings (F : Cstubs.FOREIGN) = struct
   let univ_instantiate = foreign
     "lean_univ_instantiate" (univ @-> list_name @-> list_univ @-> ptr univ @-> ptr exc @-> ret_bool)
 
-(* ** Lean expression *)
+(* *** Lean expression *)
 
   let expr_kind = int
 
@@ -516,7 +515,7 @@ module Bindings (F : Cstubs.FOREIGN) = struct
 
   let cert_decl_del = foreign "lean_cert_decl_del" (cert_decl @-> returning void) 
 
-(* ** Lean environment *)
+(* *** Lean environment *)
 
   let env_mk_std = foreign "lean_env_mk_std" (uint @-> ptr env @-> ptr exc @-> ret_bool)
 
@@ -559,7 +558,7 @@ module Bindings (F : Cstubs.FOREIGN) = struct
       ptr exc @-> ret_bool)
   *)
 
-(* ** Lean IO state *)
+(* *** Lean IO state *)
 
   let ios_mk_std = foreign "lean_ios_mk_std" (options @-> ptr ios @-> ptr exc @-> ret_bool)
 
@@ -591,76 +590,76 @@ module Bindings (F : Cstubs.FOREIGN) = struct
   let exception_to_pp_string = foreign
     "lean_exception_to_pp_string" (env @-> ios @-> exc @-> ptr lean_string @-> ptr exc @-> ret_bool)
 
-(* ** Lean inductive types *)
+(* *** Lean inductive types *)
 
-  let inductive_type_del = foreign "lean_inductive_type_del" (inductive_type @-> returning void)
+  let ind_type_del = foreign "lean_inductive_type_del" (ind_type @-> returning void)
 
-  let inductive_type_mk = foreign
+  let ind_type_mk = foreign
     "lean_inductive_type_mk" (name @-> expr @-> list_expr
-      @-> ptr inductive_type @-> ptr exc @-> ret_bool)
+      @-> ptr ind_type @-> ptr exc @-> ret_bool)
 
   let get_recursor_name = foreign
     "lean_get_recursor_name" (name @-> ptr name @-> ptr exc @-> ret_bool)
 
-  let inductive_type_get_name = foreign
-    "lean_inductive_type_get_name" (inductive_type @-> ptr name @-> ptr exc @-> ret_bool)
+  let ind_type_get_name = foreign
+    "lean_inductive_type_get_name" (ind_type @-> ptr name @-> ptr exc @-> ret_bool)
 
-  let inductive_type_get_type = foreign
-    "lean_inductive_type_get_type" (inductive_type @-> ptr expr @-> ptr exc @-> ret_bool)
+  let ind_type_get_type = foreign
+    "lean_inductive_type_get_type" (ind_type @-> ptr expr @-> ptr exc @-> ret_bool)
 
-  let inductive_type_get_constructors = foreign
-    "lean_inductive_type_get_constructors" (inductive_type
+  let ind_type_get_constructors = foreign
+    "lean_inductive_type_get_constructors" (ind_type
       @-> ptr list_expr @-> ptr exc @-> ret_bool)
 
-(* ** Lean inductive type list *)
+(* *** Lean inductive type list *)
 
-  let list_inductive_type_mk_nil = foreign
-    "lean_list_inductive_type_mk_nil" (ptr list_inductive_type  @-> ptr exc @-> ret_bool)
+  let list_ind_type_mk_nil = foreign
+    "lean_list_inductive_type_mk_nil" (ptr list_ind_type  @-> ptr exc @-> ret_bool)
 
-  let list_inductive_type_mk_cons = foreign
-    "lean_list_inductive_type_mk_cons" (inductive_type @-> list_inductive_type
-      @-> ptr list_inductive_type  @-> ptr exc @-> ret_bool)
+  let list_ind_type_mk_cons = foreign
+    "lean_list_inductive_type_mk_cons" (ind_type @-> list_ind_type
+      @-> ptr list_ind_type  @-> ptr exc @-> ret_bool)
 
-  let list_inductive_type_is_cons = foreign
-    "lean_list_inductive_type_is_cons" (list_inductive_type @-> ret_bool)
+  let list_ind_type_is_cons = foreign
+    "lean_list_inductive_type_is_cons" (list_ind_type @-> ret_bool)
 
-  let list_inductive_type_eq = foreign
-    "lean_list_inductive_type_eq" (list_inductive_type @-> list_inductive_type
+  let list_ind_type_eq = foreign
+    "lean_list_inductive_type_eq" (list_ind_type @-> list_ind_type
       @-> ptr lean_bool @-> ptr exc @-> ret_bool)
 
-  let list_inductive_type_head = foreign
-    "lean_list_inductive_type_head" (list_inductive_type
-      @-> ptr inductive_type @-> ptr exc @-> ret_bool)
+  let list_ind_type_head = foreign
+    "lean_list_inductive_type_head" (list_ind_type
+      @-> ptr ind_type @-> ptr exc @-> ret_bool)
 
-  let list_inductive_type_tail = foreign
-    "lean_list_inductive_type_tail" (list_inductive_type
-      @-> ptr list_inductive_type @-> ptr exc @-> ret_bool)
+  let list_ind_type_tail = foreign
+    "lean_list_inductive_type_tail" (list_ind_type
+      @-> ptr list_ind_type @-> ptr exc @-> ret_bool)
 
-  let list_inductive_type_del = foreign
-    "lean_list_inductive_type_del" (list_inductive_type @-> returning void)
+  let list_ind_type_del = foreign
+    "lean_list_inductive_type_del" (list_ind_type @-> returning void)
 
-(* ** Lean inductive declarations *)
+(* *** Lean inductive declarations *)
 
-  let inductive_decl_mk = foreign
-    "lean_inductive_decl_mk" (list_name @-> uint @-> list_inductive_type
-      @-> ptr inductive_decl @-> ptr exc @-> ret_bool)
+  let ind_decl_mk = foreign
+    "lean_inductive_decl_mk" (list_name @-> uint @-> list_ind_type
+      @-> ptr ind_decl @-> ptr exc @-> ret_bool)
 
-  let inductive_decl_get_univ_params = foreign
-    "lean_inductive_decl_get_univ_params" (inductive_decl
+  let ind_decl_get_univ_params = foreign
+    "lean_inductive_decl_get_univ_params" (ind_decl
       @-> ptr list_name @-> ptr exc @-> ret_bool)
 
-  let inductive_decl_get_num_params = foreign
-    "lean_inductive_decl_get_num_params" (inductive_decl @-> ptr uint @-> ptr exc @-> ret_bool)
+  let ind_decl_get_num_params = foreign
+    "lean_inductive_decl_get_num_params" (ind_decl @-> ptr uint @-> ptr exc @-> ret_bool)
 
-  let inductive_decl_get_types = foreign
-    "lean_inductive_decl_get_types" (inductive_decl
-      @-> ptr list_inductive_type @-> ptr exc @-> ret_bool)
+  let ind_decl_get_types = foreign
+    "lean_inductive_decl_get_types" (ind_decl
+      @-> ptr list_ind_type @-> ptr exc @-> ret_bool)
 
-  let env_add_inductive = foreign
-    "lean_env_add_inductive" (env @-> inductive_decl @-> ptr env @-> ptr exc @-> ret_bool)
+  let env_add_ind = foreign
+    "lean_env_add_inductive" (env @-> ind_decl @-> ptr env @-> ptr exc @-> ret_bool)
 
-  let env_is_inductive_type = foreign
-    "lean_env_is_inductive_type" (env @-> name @-> ptr inductive_decl @-> ptr exc @-> ret_bool)
+  let env_is_ind_type = foreign
+    "lean_env_is_inductive_type" (env @-> name @-> ptr ind_decl @-> ptr exc @-> ret_bool)
 
   let env_is_constructor = foreign
     "lean_env_is_constructor" (env @-> name @-> ptr name @-> ptr exc @-> ret_bool)
@@ -668,24 +667,24 @@ module Bindings (F : Cstubs.FOREIGN) = struct
   let env_is_recursor = foreign
     "lean_env_is_recursor" (env @-> name @-> ptr name @-> ptr exc @-> ret_bool)
 
-  let env_get_inductive_type_num_indices = foreign
+  let env_get_ind_type_num_indices = foreign
     "lean_env_get_inductive_type_num_indices" (env @-> name @-> ptr uint @-> ptr exc @-> ret_bool)
 
-  let env_get_inductive_type_num_minor_premises = foreign
+  let env_get_ind_type_num_minor_premises = foreign
     "lean_env_get_inductive_type_num_minor_premises" (env @-> name
       @-> ptr uint @-> ptr exc @-> ret_bool)
 
-  let env_get_inductive_type_num_type_formers = foreign
+  let env_get_ind_type_num_type_formers = foreign
     "lean_env_get_inductive_type_num_type_formers" (env @-> name
       @-> ptr uint @-> ptr exc @-> ret_bool)
 
-  let env_get_inductive_type_has_dep_elim = foreign
+  let env_get_ind_type_has_dep_elim = foreign
     "lean_env_get_inductive_type_has_dep_elim" (env @-> name
       @-> ptr lean_bool @-> ptr exc @-> ret_bool)
 
-  let inductive_decl_del = foreign "lean_inductive_decl_del" (inductive_decl @-> returning void)
+  let ind_decl_del = foreign "lean_inductive_decl_del" (ind_decl @-> returning void)
 
-(* ** Lean modules *)
+(* *** Lean modules *)
 
   let env_import = foreign
     "lean_env_import" (env @-> ios @-> list_name @-> ptr env @-> ptr exc @-> ret_bool)
@@ -696,7 +695,7 @@ module Bindings (F : Cstubs.FOREIGN) = struct
 
   let get_hott_path = foreign "lean_get_hott_path" (ptr lean_string @-> ptr exc @-> ret_bool)
 
-(* ** Lean parser *)
+(* *** Lean parser *)
 
   let parse_file = foreign
     "lean_parse_file" (env @-> ios @-> string @-> ptr env @-> ptr ios @-> ptr exc @-> ret_bool)
@@ -708,7 +707,7 @@ module Bindings (F : Cstubs.FOREIGN) = struct
     "lean_parse_expr" (env @-> ios @-> string
       @-> ptr expr @-> ptr list_name @-> ptr exc @-> ret_bool)
 
-(* ** Lean type checker *)
+(* *** Lean type checker *)
 
   let type_checker_mk = foreign
     "lean_type_checker_mk" (env @-> ptr type_checker @-> ptr exc @-> ret_bool)
@@ -734,41 +733,57 @@ module Bindings (F : Cstubs.FOREIGN) = struct
       @-> ptr lean_bool @-> ptr cnstr_seq @-> ptr exc @-> ret_bool)
 
 
-  (* ** Lean declarations *)
+(* *** Lean declarations *)
+
   (* FIXME: use Types.TYPE.enum instead to deal with lean_decl_kind<>int *)
   let decl_kind = int
 
   let decl_mk_axiom = foreign
    "lean_decl_mk_axiom" (name @-> list_name @-> expr @-> ptr decl @-> ptr exc @-> ret_bool)
+
   let decl_mk_const = foreign
    "lean_decl_mk_const" (name @-> list_name @-> expr @-> ptr decl @-> ptr exc @-> ret_bool)
+
   let decl_mk_def = foreign
    "lean_decl_mk_def" (name @-> list_name @-> expr @-> expr @-> uint @-> lean_bool @->
-                         ptr decl @-> ptr exc @-> ret_bool)
+     ptr decl @-> ptr exc @-> ret_bool)
+
   let decl_mk_def_with = foreign
    "lean_decl_mk_def_with" (env @-> name  @-> list_name @-> expr @-> expr @-> lean_bool @->
-                         ptr decl @-> ptr exc @-> ret_bool)
+     ptr decl @-> ptr exc @-> ret_bool)
+
   let decl_mk_thm = foreign
    "lean_decl_mk_thm" (name @-> list_name @-> expr @-> expr @-> uint @->
-                         ptr decl @-> ptr exc @-> ret_bool)
+     ptr decl @-> ptr exc @-> ret_bool)
+
   let decl_mk_thm_with = foreign
    "lean_decl_mk_thm_with" (env @-> name  @-> list_name @-> expr @-> expr @->
-                         ptr decl @-> ptr exc @-> ret_bool)
+     ptr decl @-> ptr exc @-> ret_bool)
+
   let decl_get_kind = foreign
    "lean_decl_get_kind" (decl @-> returning decl_kind)
+
   let decl_get_name = foreign
-   "lean_decl_get_name" (decl @-> ptr name @-> ptr exc @-> ret_bool)
+   "lean_decl_get_name" (decl @->
+     ptr name @-> ptr exc @-> ret_bool)
+
   let decl_get_univ_params = foreign
    "lean_decl_get_univ_params" (decl @-> ptr list_name @-> ptr exc @-> ret_bool)
+
   let decl_get_type = foreign
    "lean_decl_get_type" (decl @-> ptr expr @-> ptr exc @-> ret_bool)
+
   let decl_get_value = foreign
    "lean_decl_get_value" (decl @-> ptr expr @-> ptr exc @-> ret_bool)
+
   let decl_get_height = foreign
    "lean_decl_get_height" (decl @-> ptr uint @-> ptr exc @-> ret_bool)
+
   let decl_get_conv_opt = foreign
    "lean_decl_get_conv_opt" (decl @-> ptr lean_bool @-> ptr exc @-> ret_bool)
+
   let decl_check = foreign 
    "lean_decl_check" (env @-> decl @-> ptr cert_decl @-> ptr exc @-> ret_bool)  
+
 end
                                          

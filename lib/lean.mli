@@ -1,4 +1,6 @@
-(* * Types *)
+(* * Lean (high-level) interface *)
+
+(* ** Types *)
 
 type name                = LeanInternal.name
 type list_name           = LeanInternal.list_name
@@ -12,13 +14,14 @@ type cert_decl           = LeanInternal.cert_decl
 type expr                = LeanInternal.expr
 type list_expr           = LeanInternal.list_expr
 type macro_def           = LeanInternal.macro_def
-type inductive_type      = LeanInternal.inductive_type
-type list_inductive_type = LeanInternal.list_inductive_type
-type inductive_decl      = LeanInternal.inductive_decl
+type inductive_type      = LeanInternal.ind_type
+type list_inductive_type = LeanInternal.list_ind_type
+type inductive_decl      = LeanInternal.ind_decl
 type type_checker        = LeanInternal.type_checker
 type cnstr_seq           = LeanInternal.cnstr_seq
 
-(* * Names *)
+(* ** Name *)
+
 module Name : sig
   type view =
     | Anon
@@ -32,18 +35,17 @@ module Name : sig
   val mk_list   : view list -> list_name
 end
 
-(* * Options *)
-                
-(* * Universes *)
+(* ** Option *)           
+(* ** Universes *)
+
 module Univ : sig
   val zero : univ
   val one : univ
   val mk : int -> univ
 end
 
-(* * List of universes *)
+(* ** Expression *)
 
-(* * Expression *)
 module Expr : sig
   val forall : string * expr -> (expr -> expr) -> expr
   val ty_prop   : expr
@@ -51,29 +53,31 @@ module Expr : sig
   val (|:)      : string -> expr -> string * expr
 end
                 
-(* * IO state *)
+(* ** IO state *)
+
 module Ios : sig
   val mk : ?options:options -> unit -> ios
 end
                
-(* * Environment *)
+(* ** Environment *)
+
 module Env : sig
   val mk : ?filenames:list_name -> ios -> env
 end
                
-(* * Inductive types *)
-(* * Inductive type list *)
-(* * Inductive declarations *)
-(* * Modules *)
-(* * Parser *)
-(* * Type checker *)
+(* ** Inductive type *)
+(* ** Inductive declaration *)
+(* ** Module *)
+(* ** Parser *)
+(* ** Type checker *)
+(* ** Declaration *)
 
-(* * Declarations *)
 module Decl : sig
   val to_string : ?pp: env * ios -> decl -> string
 end
                 
-(* * EnvParser *)
+(* ** EnvParser *)
+
 module type LeanFiles = sig
   val _olean : string list
   val _lean : string list
@@ -91,8 +95,9 @@ module GetExprParser (LF : LeanFiles) : sig
   val (<@) : string -> string -> t (* Syntactic sugar for "Lean argument feeding" *)
 
                                    
-  val add_proof_obligation:
+  val add_proof_obligation :
     ?prefix:string -> ?name:string -> ?univ_params:list_name -> expr -> unit
+
   val export_proof_obligations : string -> unit
 end
                          
