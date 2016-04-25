@@ -15,8 +15,8 @@ build-test: [
 ]
 install: [make "install"]
 remove: [
-  ["ocamlfind" "remove" "flock"]
-  ["ocamlfind" "remove" "flock_bindings"]
+  ["ocamlfind" "remove" "lean"]
+  ["ocamlfind" "remove" "lean_bindings"]
 ]
 depends: [
   "ctypes"         {>= "0.4.0"}
