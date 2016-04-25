@@ -228,8 +228,6 @@ module Expr : sig
   val get_macro_args          : expr -> list_expr
 
   val to_pp_string : env -> ios -> expr -> string
-
-  (*val macro_def_del         : macro_def -> unit*)
 end
 
 module ListExpr : List with

@@ -19,7 +19,7 @@ type list_inductive_type = LeanInternal.list_ind_type
 type inductive_decl      = LeanInternal.ind_decl
 type type_checker        = LeanInternal.type_checker
 type cnstr_seq           = LeanInternal.cnstr_seq
-
+type binder_kind         = LeanInternal.binder_kind
 (* ** Name *)
 
 module Name : sig
@@ -47,7 +47,7 @@ end
 (* ** Expression *)
 
 module Expr : sig
-  val forall : string * expr -> (expr -> expr) -> expr
+  val forall : string * expr -> ?binder_kind : binder_kind-> (expr -> expr) -> expr
   val ty_prop   : expr
   val ty_type   : expr
   val (|:)      : string -> expr -> string * expr
@@ -86,18 +86,19 @@ end
 module GetExprParser (LF : LeanFiles) : sig
   type t = expr
   val to_string : t -> string
-  val to_pp_string : t -> string                           
+  val to_pp_string : t -> string
+  val get_type : t -> t
   val get     : string -> t
   val get_with_univ_params : string -> t * list_name                            
   val as_1ary : t -> t -> t
   val as_2ary : t -> t -> t -> t
   val as_nary : t -> t list -> t
-  val (<@) : string -> string -> t (* Syntactic sugar for "Lean argument feeding" *)
+  val (<@) : t -> t -> t (* Syntactic sugar for "Lean argument feeding" *)
 
                                    
   val add_proof_obligation :
     ?prefix:string -> ?name:string -> ?univ_params:list_name -> expr -> unit
-
-  val export_proof_obligations : string -> unit
+  val proof_obligations_to_string : unit -> string
+  val export_proof_obligations : ?univ_params:list_name -> string -> unit
 end
                          

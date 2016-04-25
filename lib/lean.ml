@@ -23,7 +23,7 @@ type list_inductive_type = LI.list_ind_type
 type inductive_decl      = LI.ind_decl
 type type_checker        = LI.type_checker
 type cnstr_seq           = LI.cnstr_seq
-
+type binder_kind         = LI.binder_kind
 (* ** Name *)
 
 module Name = struct
@@ -86,8 +86,8 @@ end
 module Expr = struct
   open LI.Expr                                   
   let bruijn = mk_var @< Unsigned.UInt.of_int                                   
-  let forall (s, ty) (f : expr -> expr) =
-    mk_pi !:s ~ty (f @@ bruijn 0) LI.Binder_default
+  let forall (s, ty) ?(binder_kind=LI.Binder_default) (f : expr -> expr) =
+    mk_pi !:s ~ty (f @@ bruijn 0) binder_kind
 
   let ty_prop = mk_sort Univ.zero
   let ty_type = mk_sort Univ.one
@@ -197,6 +197,11 @@ module GetExprParser (LF : LeanFiles) = struct
       LF._lean
 
   let to_pp_string = LI.Expr.to_pp_string env !ios
+
+                                          
+  let get_type =
+    let ty_chkr = LI.TypeChecker.mk env in
+    fst @< LI.TypeChecker.check ty_chkr
                                           
   let get_with_univ_params s = LI.Parse.expr env !ios s
   let get s = fst @@ get_with_univ_params s
@@ -214,7 +219,7 @@ module GetExprParser (LF : LeanFiles) = struct
   let as_2ary app =
     fun le1 le2 -> as_nary app [le1; le2]
 
-  let (<@) s1 s2 = LI.Expr.mk_app (get s1) (get s2)
+  let (<@) = LI.Expr.mk_app
 
   (* Proof obligation generation *)
   let output_env = ref env
@@ -225,7 +230,8 @@ module GetExprParser (LF : LeanFiles) = struct
     Hashtbl.replace names_db s (i+1);
     string_of_int (i+1)
                     
-                                    
+  let proof_obligation_name = "proof_obligation"
+                                
   let gen_unique_name prefix =
     prefix ^ "_" ^ (get_and_incr prefix)
                          
@@ -234,22 +240,33 @@ module GetExprParser (LF : LeanFiles) = struct
         ?(name = gen_unique_name prefix)
         ?(univ_params = Name.mk_list [])
         expr =
+    if (name = proof_obligation_name) then invalid_arg @@
+      "'" ^ name ^ "' name is reserved for the proof obligation wrapper declaration.";
     let checked_proof_obligation_decl =
       Decl.mk_cert_def !output_env ~name ~univ_params expr
     in
     added_proof_obligations := expr :: !added_proof_obligations;
     output_env := LI.Env.add !output_env checked_proof_obligation_decl
 
+  let _no_nl = String.map (function '\n' -> ' ' | c -> c)
+  let proof_obligations_to_string () =
+    let ios = Ios.mk () in
+    fst @@ List.fold_left
+      (fun (s,i) po ->
+        (s ^ "(" ^ (string_of_int i) ^ ") " ^ (_no_nl @@ LI.Expr.to_pp_string !output_env ios po) ^ "\n",
+         i+1))
+      ("",1) @@ List.rev !added_proof_obligations
+      
   let _and = get "and" |> as_2ary
                             
-  let export_proof_obligations filename =
+  let export_proof_obligations ?univ_params filename =
     let all_POs = List.rev !added_proof_obligations in
     let env = !output_env in
     match all_POs with
     | po1 :: pos ->
        let all_POs_expr = List.fold_left _and po1 pos in
        let all_POs_cert_decl =
-         Decl.mk_cert_def env ~name:"proof_obligation" all_POs_expr in
+         Decl.mk_cert_def env ~name:"proof_obligation" ?univ_params all_POs_expr in
        let env = LI.Env.add env all_POs_cert_decl in
        LI.Env.export env ~olean_file:filename;
     | _ -> ()

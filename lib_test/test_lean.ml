@@ -6,7 +6,8 @@ module L  = Lean
 module F  = Format
 
 (* * Tests: internal *)
-              (* The following function uses the unsound Obj.library (avoids static type checking) ;
+              
+(* The following function uses the unsound 'Obj' library /!\ it lacks static type checking /!\
 it is a quick and dirty way to convert a variant type (e.g. type enum = Foo | Bar) into
 an int (e.g. 0 | 1) as C enums 'naturally' do.
 If the input is not of the right type, it will return -1 *)
@@ -19,20 +20,11 @@ let int_of_kind x =
 (* *** LEAN EXPRESSIONS *** *)
             
 module ImportLeanDefs (LF : L.LeanFiles) = struct
-  module ExprParser = L.GetExprParser(LF)                               
-  open ExprParser 
-  let get_with_univ_params,get,as_1ary,as_2ary,as_nary,
-      add_proof_obligation,export_proof_obligations =
-    get_with_univ_params,get,as_1ary,as_2ary,as_nary,add_proof_obligation,export_proof_obligations
-  let (<@) = (<@)
-               
-  let to_string = to_string
-  let to_pp_string = to_pp_string
-                         
+  include L.GetExprParser(LF)                                             
   let mk_Eq   = get "eq"        |> as_2ary
   let mk_GExp = get "expr.Exp"  |> as_2ary
   let mk_GGen = get "expr.Ggen"
-  let mk_FNat : int -> ExprParser.t =
+  let mk_FNat : int -> t =
     let nat_zero = get "nat.zero" in
     let nat_succ = get "nat.succ" |> as_1ary in
     let neg_succ_of_nat = get "neg_succ_of_nat" |> as_1ary in
@@ -42,17 +34,18 @@ module ImportLeanDefs (LF : L.LeanFiles) = struct
       | n -> nat_succ @@ lint_of_int (n-1) in
     let t_of_lint = get "expr.Fint" |> as_1ary in
     fun n -> t_of_lint @@ lint_of_int n                                    
-  let mk_FPlus = "expr.Fop2" <@ "expr.fop2.Fadd" |> as_2ary
+  let mk_FPlus = get "expr.Fop2 expr.fop2.Fadd" |> as_2ary
 
-  let lean_eq ~ty e1 e2 =
+  let lean_eq e1 ?(ty = get_type e1) e2 =
     let eq = get "@eq.{1}" |> as_nary in
     eq [ty; e1; e2]
+  let (|=|) = lean_eq
 end
 (* Now that the functor is defined,
 the module only needs to be instanciated with a call to the functor,
 e.g., *)
 
-module LeanDefs =
+module LeanEnv =
   ImportLeanDefs(
       struct
         let _olean = ["data/nat"]
@@ -83,6 +76,15 @@ let t_shift,
   in
   (open', print', close')
 
+let t_long_print s =
+  let tmp = ref "" in
+  let t_char_print = function
+    | '\n' -> t_print !tmp; tmp := ""
+    | c -> tmp := !tmp ^ String.make 1 c in
+  String.iter t_char_print s;
+  if !tmp <> "" then
+    t_print !tmp
+    
 let t_internal_name_anon =
   "lean_name: anon" >:: fun () ->
   let open LI.Name in
@@ -328,25 +330,23 @@ let t_internal_parse =
         (sorry_decl, sorry) |> snd |> t_pp_print;
       ); t_unshift () ;
       t_shift ~name:"New def" (); (
-        let open LeanDefs in
+        let open LeanEnv in
         t_print @@ to_pp_string @@ mk_Eq
           (mk_GExp mk_GGen (mk_FPlus (mk_FNat (-1)) (mk_FNat 4)))
           (mk_GExp mk_GGen (mk_FPlus (mk_FNat 4) (mk_FNat (-1))));
       ); t_unshift (); 
     ); t_unshift ();
     
-    t_shift ~name:"Generating proof obligation" (); (
-      let open LeanDefs in
-    (* Generate a .lean file proof obligation of:
-        forall n : nat, g ^ n = g ^ n *)
-      let nat_ty = get "nat" in
-      let g_ty = "expr" <@ "ty.Grp" in
+    t_shift ~name:"Proof obligation" (); (
+      let open LeanEnv in
+      let nat = get "nat" in
       let forall_n_eq_n_n =
         let open L.Expr in
-        forall ("n" |: nat_ty) (fun n -> lean_eq ~ty:nat_ty n n) in
-      LeanDefs.add_proof_obligation forall_n_eq_n_n;
-      LeanDefs.add_proof_obligation (lean_eq ~ty:g_ty mk_GGen mk_GGen);      
-      LeanDefs.export_proof_obligations "foo.olean"; 
+        forall ("n" |: nat) (fun n -> lean_eq ~ty:nat n n) in
+      LeanEnv.add_proof_obligation forall_n_eq_n_n;
+      LeanEnv.add_proof_obligation (mk_GGen |=| mk_GGen);
+      LeanEnv.proof_obligations_to_string () |> t_long_print;
+      LeanEnv.export_proof_obligations "foo.olean"; 
     ); t_unshift()
     
     
