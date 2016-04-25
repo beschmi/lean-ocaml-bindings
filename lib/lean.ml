@@ -86,7 +86,7 @@ end
 module Expr = struct
   open LI.Expr                                   
   let bruijn = mk_var @< Unsigned.UInt.of_int                                   
-  let forall (s, ty) ?(binder_kind=LI.Binder_default) (f : expr -> expr) =
+  let mk_forall (s, ty) ?(binder_kind=LI.Binder_default) (f : expr -> expr) =
     mk_pi !:s ~ty (f @@ bruijn 0) binder_kind
 
   let ty_prop = mk_sort Univ.zero
@@ -149,9 +149,7 @@ module Decl = struct
     (LI.Decl.get_kind decl |> decl_kind_to_string) ^ " " ^
       (LI.Decl.get_name decl |> Name.pp) ^ " : " ^
         (LI.Decl.get_type decl |> expr_to_string ?pp) ^
-          (if has_value decl
-           then " :=\n" ^ (decl |> get_opt_value |> opt_value_to_string ?pp)
-           else "")
+          (get_opt_value decl |> opt_value_to_string ?pp)
             
   let mk_cert_def env ~name ?(univ_params = Name.mk_list []) ?(ty = Expr.ty_prop) value =
     let decl = LI.Decl.mk_def_with

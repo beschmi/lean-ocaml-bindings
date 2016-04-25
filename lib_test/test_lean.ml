@@ -49,7 +49,7 @@ module LeanEnv =
   ImportLeanDefs(
       struct
         let _olean = ["data/nat"]
-        let _lean = ["expr.lean"]
+        let _lean = ["../autognp-lean/expr.lean"]
       end)
         
               
@@ -342,7 +342,7 @@ let t_internal_parse =
       let nat = get "nat" in
       let forall_n_eq_n_n =
         let open L.Expr in
-        forall ("n" |: nat) (fun n -> lean_eq ~ty:nat n n) in
+        mk_forall ("n" |: nat) (fun n -> lean_eq ~ty:nat n n) in
       LeanEnv.add_proof_obligation forall_n_eq_n_n;
       LeanEnv.add_proof_obligation (mk_GGen |=| mk_GGen);
       LeanEnv.proof_obligations_to_string () |> t_long_print;

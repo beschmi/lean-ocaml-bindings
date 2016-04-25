@@ -47,7 +47,7 @@ end
 (* ** Expression *)
 
 module Expr : sig
-  val forall : string * expr -> ?binder_kind : binder_kind-> (expr -> expr) -> expr
+  val mk_forall : string * expr -> ?binder_kind : binder_kind-> (expr -> expr) -> expr
   val ty_prop   : expr
   val ty_type   : expr
   val (|:)      : string -> expr -> string * expr
