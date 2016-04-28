@@ -84,7 +84,7 @@ end
 (* ** Expression *)
 
 module Expr = struct
-  open LI.Expr                                   
+  open LI.Expr
   let bruijn = mk_var @< Unsigned.UInt.of_int                                   
   let mk_forall (s, ty) ?(binder_kind=LI.Binder_default) (f : expr -> expr) =
     mk_pi !:s ~ty (f @@ bruijn 0) binder_kind
@@ -92,6 +92,8 @@ module Expr = struct
   let ty_prop = mk_sort Univ.zero
   let ty_type = mk_sort Univ.one
   let (|:) s ty = s,ty
+  let mk_const s =
+    mk_const !:s @@ LI.ListUniv.of_list []
 end
                 
 (* ** IO state *)
@@ -218,6 +220,21 @@ module GetExprParser (LF : LeanFiles) = struct
     fun le1 le2 -> as_nary app [le1; le2]
 
   let (<@) = LI.Expr.mk_app
+
+  (* Nats and Integers *)
+  let lint_of_int =
+    let nat_zero = get "nat.zero" in
+    let nat_succ = get "nat.succ" |> as_1ary in
+    let neg_succ_of_nat = get "neg_succ_of_nat" |> as_1ary in
+    let rec go = function
+      | 0 -> nat_zero
+      | n when n < 0 -> neg_succ_of_nat @@ go (-n - 1)
+      | n -> nat_succ @@ go (n-1) in
+    go
+
+  let lnat_of_posint = function
+    | n when n < 0 -> invalid_arg "Positive integer expected"
+    | n -> lint_of_int n
 
   (* Proof obligation generation *)
   let output_env = ref env

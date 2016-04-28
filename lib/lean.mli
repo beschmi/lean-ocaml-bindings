@@ -47,6 +47,18 @@ end
 (* ** Expression *)
 
 module Expr : sig
+  (*val mk_const     : string                                 -> expr
+  val mk_var       : Unsigned.uint                          -> expr
+  val mk_sort      : univ                                   -> expr
+
+  val mk_app       : expr -> expr                           -> expr
+  val mk_lambda    : name -> ty:expr -> expr -> binder_kind -> expr
+  val mk_pi        : name -> ty:expr -> expr -> binder_kind -> expr
+  val mk_macro     : macro_def -> list_expr                 -> expr
+  val mk_local     : name -> expr                           -> expr
+  val mk_local_ext : name -> name -> expr -> binder_kind    -> expr
+  val mk_metavar   : name -> expr                           -> expr*)
+  
   val mk_forall : string * expr -> ?binder_kind : binder_kind-> (expr -> expr) -> expr
   val ty_prop   : expr
   val ty_type   : expr
@@ -95,7 +107,11 @@ module GetExprParser (LF : LeanFiles) : sig
   val as_nary : t -> t list -> t
   val (<@) : t -> t -> t (* Syntactic sugar for "Lean argument feeding" *)
 
-                                   
+  (* Nats and Integers *)
+  val lint_of_int    : int -> t
+  val lnat_of_posint : int -> t
+                       
+  (* Proof obligation generation *)                  
   val add_proof_obligation :
     ?prefix:string -> ?name:string -> ?univ_params:list_name -> expr -> unit
   val proof_obligations_to_string : unit -> string
