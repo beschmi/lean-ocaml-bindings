@@ -222,20 +222,22 @@ module GetExprParser (LF : LeanFiles) = struct
   let (<@) = LI.Expr.mk_app
 
   (* Nats and Integers *)
-  let lint_of_int =
+  let lnat_of_posint =
     let nat_zero = get "nat.zero" in
     let nat_succ = get "nat.succ" |> as_1ary in
-    let neg_succ_of_nat = get "neg_succ_of_nat" |> as_1ary in
     let rec go = function
+      | n when n < 0 -> invalid_arg "Positive integer expected"
       | 0 -> nat_zero
-      | n when n < 0 -> neg_succ_of_nat @@ go (-n - 1)
-      | n -> nat_succ @@ go (n-1) in
+      | n -> nat_succ (go (n-1)) in
     go
 
-  let lnat_of_posint = function
-    | n when n < 0 -> invalid_arg "Positive integer expected"
-    | n -> lint_of_int n
-
+  let lint_of_int =
+    let int_of_nat = get "int.of_nat" |> as_1ary
+    and neg_succ_of_nat = get "neg_succ_of_nat" |> as_1ary in
+    function
+    | i when i >= 0 -> int_of_nat @@ lnat_of_posint i
+    | i -> neg_succ_of_nat @@ lnat_of_posint (-i -1)
+                                                                                                 
   (* Proof obligation generation *)
   let output_env = ref env
   let added_proof_obligations : expr list ref = ref []

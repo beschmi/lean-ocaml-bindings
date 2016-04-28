@@ -113,7 +113,7 @@ module GetExprParser (LF : LeanFiles) : sig
                        
   (* Proof obligation generation *)                  
   val add_proof_obligation :
-    ?prefix:string -> ?name:string -> ?univ_params:list_name -> expr -> unit
+    ?prefix:string -> ?name:string -> ?univ_params:list_name -> t -> unit
   val proof_obligations_to_string : unit -> string
   val export_proof_obligations : ?univ_params:list_name -> string -> unit
 end
