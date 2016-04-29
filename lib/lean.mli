@@ -2,6 +2,7 @@
 
 (* ** Types *)
 
+type uint                = Unsigned.UInt.t
 type name                = LeanInternal.name
 type list_name           = LeanInternal.list_name
 type options             = LeanInternal.options
@@ -20,62 +21,92 @@ type inductive_decl      = LeanInternal.ind_decl
 type type_checker        = LeanInternal.type_checker
 type cnstr_seq           = LeanInternal.cnstr_seq
 type binder_kind         = LeanInternal.binder_kind
-(* ** Name *)
 
-module Name : sig
-  type view =
-    | Anon
-    | Str of string
-    | Idx of string * int
-  val eq : name -> name -> bool
-  val pp : name -> string
-  val view : name -> view
-  val mk   : view -> name
-  val view_list : list_name -> view list
-  val mk_list   : view list -> list_name
-end
+(* ** View Modules Signatures *)
+module type BaseView = sig
+  type t
+  type view
+  val eq : t -> t -> bool
+  val str : t -> string
+  val view : t -> view
+  val mk   : view -> t
+end         
+module type BaseViewWithList =
+  (sig
+    include BaseView
+    type list_t
+    val view_list : list_t -> view list
+    val list_mk   : view list -> list_t
+  end)
+    
+(* ** Name *)    
+type name_view =
+  | NAnon
+  | NStr of string
+  | NIdx of string * int
 
+module Name :
+(sig
+  include BaseViewWithList with
+            type t = name and
+            type list_t = list_name and
+            type view = name_view
+end) 
+  
 (* ** Option *)           
 (* ** Universes *)
-
-module Univ : sig
-  val zero : univ
-  val one : univ
-  val mk : int -> univ
-end
+module Univ :
+(sig
+  include BaseViewWithList with
+            type t = univ and
+            type list_t = list_univ and
+            type view = int
+  val zero : t
+  val one : t
+end)
 
 (* ** Expression *)
+type expr_view =
+    | ExprVar      of uint
+    | ExprSort     of univ
+    | ExprConst    of name * list_univ (* Univ.expr_view list *)
+    | ExprApp      of expr_view * expr_view
+    | ExprLambda   of name * expr * expr_view * binder_kind
+    | ExprPi       of name * expr * expr_view * binder_kind
+    | ExprMacro    of macro_def * (expr_view list)
+    | ExprLocal    of name * expr_view                           
+    | ExprLocalExt of name * name * expr_view * binder_kind    
+    | ExprMetavar  of name * expr_view
+    | ExprRaw      of expr
 
-module Expr : sig
-  (*val mk_const     : string                                 -> expr
-  val mk_var       : Unsigned.uint                          -> expr
-  val mk_sort      : univ                                   -> expr
-
-  val mk_app       : expr -> expr                           -> expr
-  val mk_lambda    : name -> ty:expr -> expr -> binder_kind -> expr
-  val mk_pi        : name -> ty:expr -> expr -> binder_kind -> expr
-  val mk_macro     : macro_def -> list_expr                 -> expr
-  val mk_local     : name -> expr                           -> expr
-  val mk_local_ext : name -> name -> expr -> binder_kind    -> expr
-  val mk_metavar   : name -> expr                           -> expr*)
-  
-  val mk_forall : string * expr -> ?binder_kind : binder_kind-> (expr -> expr) -> expr
+module Expr :
+(sig
+  include BaseViewWithList with
+            type t = expr and
+            type list_t = list_expr and
+            type view = expr_view
+  type ty = t
+  val pp : ?envios : env * ios -> t -> string
+  val mk_forall : string * expr -> ?binder_kind : binder_kind-> (expr -> view) -> view
   val ty_prop   : expr
   val ty_type   : expr
   val (|:)      : string -> expr -> string * expr
-end
-                
+end)
+  
+                                               
 (* ** IO state *)
-
-module Ios : sig
+module Ios :
+(sig(*
+  include BaseView*)
   val mk : ?options:options -> unit -> ios
-end
+end)
                
 (* ** Environment *)
-
-module Env : sig
+module Env :
+(sig(*
+  include BaseView*)
   val mk : ?filenames:list_name -> ios -> env
-end
+end)
                
 (* ** Inductive type *)
 (* ** Inductive declaration *)
@@ -83,10 +114,19 @@ end
 (* ** Parser *)
 (* ** Type checker *)
 (* ** Declaration *)
+type decl_view =
+  | DeclAxiom of Name.t * Expr.ty
+  | DeclConst of Name.t * Expr.ty
+  | DeclDef   of Name.t * Expr.ty * Expr.t
+  | DeclThm   of Name.t * Expr.ty * Expr.t
 
-module Decl : sig
+module Decl :
+(sig(*
+  include BaseView with
+            type t = decl and
+            type view = decl_view*)
   val to_string : ?pp: env * ios -> decl -> string
-end
+end)
                 
 (* ** EnvParser *)
 

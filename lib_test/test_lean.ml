@@ -171,11 +171,11 @@ let t_internal_options =
   "lean_options: *" >:: fun () ->
   let open LI.Options in
   let oe        = mk_empty () in
-  let n_bool   = L.Name.(mk (Str "o_bool"))   in
-  let n_int    = L.Name.(mk (Str "o_int"))    in
-  let n_uint   = L.Name.(mk (Str "o_uint"))   in
-  let n_double = L.Name.(mk (Str "o_double")) in
-  let n_string = L.Name.(mk (Str "o_string")) in
+  let n_bool   = L.Name.(mk (L.NStr "o_bool"))   in
+  let n_int    = L.Name.(mk (L.NStr "o_int"))    in
+  let n_uint   = L.Name.(mk (L.NStr "o_uint"))   in
+  let n_double = L.Name.(mk (L.NStr "o_double")) in
+  let n_string = L.Name.(mk (L.NStr "o_string")) in
   let v_bool   = true in
   let v_int    = 42 in
   let v_uint   = Unsigned.UInt.of_int 99 in
@@ -224,18 +224,18 @@ let t_internal_list_univ =
 
 let t_name =
   "lean_name: *" >:: fun () ->
-  let n = Name.mk (Name.Idx("hello",5)) in
-  assert_equal ~msg:"a1" (Name.view n) (Name.Idx("hello",5));
-  let n = Name.mk (Name.Str "hello") in
-  assert_equal ~msg:"a2" (Name.view n) (Name.Str "hello");
-  let n = Name.mk Name.Anon in
-  assert_equal ~msg:"a3" (Name.view n) Name.Anon
+  let n = Name.mk (NIdx("hello",5)) in
+  assert_equal ~msg:"a1" (Name.view n) (NIdx("hello",5));
+  let n = Name.mk (NStr "hello") in
+  assert_equal ~msg:"a2" (Name.view n) (NStr "hello");
+  let n = Name.mk NAnon in
+  assert_equal ~msg:"a3" (Name.view n) NAnon
 
 let t_list_name =
   "lean_name: *" >:: fun () ->
-  let n1 = Name.mk (Name.Idx("hello",5)) in
-  let n2 = Name.mk (Name.Str "hello") in
-  let n3 = Name.mk Name.Anon in
+  let n1 = Name.mk (NIdx("hello",5)) in
+  let n2 = Name.mk (NStr "hello") in
+  let n3 = Name.mk NAnon in
   let ns = [ n1; n2; n3 ] in
   let nl = LI.ListName.of_list ns in
   let ns1 = List.map Name.view ns in
@@ -247,7 +247,7 @@ let t_internal_expr =
     let open LI.Expr in
     let uzero = Unsigned.UInt.of_int 0 in
     let e0 = mk_var uzero in
-    let e1 = mk_const (Name.mk Name.Anon) (LI.ListUniv.mk_nil ()) in
+    let e1 = mk_const (Name.mk NAnon) (LI.ListUniv.mk_nil ()) in
     aeq "e0 <> e1" false (eq e0 e1);
     aeq "e0 -> #0" "#0" (to_string e0);
     aeq "e1 -> [anonymous]" "[anonymous]" (to_string e1)
@@ -284,7 +284,7 @@ let t_internal_parse =
     let univ0 = Univ.mk_zero () in
     let prop_sort = mk_sort (univ0) in
     let p = mk_local !:"p" prop_sort in
-    let e1 = mk_const (L.Name.mk L.Name.Anon) (ListUniv.of_list [Univ.mk_zero ()]) in
+    let e1 = mk_const (L.Name.mk L.NAnon) (ListUniv.of_list [Univ.mk_zero ()]) in
     let pp_string = to_pp_string env ios in
     let t_pp_print = t_print @< pp_string in
 
@@ -323,7 +323,7 @@ let t_internal_parse =
       aeq "e0 -> #0" "#0" (pp_string e0);
       aeq "e1 -> [anonymous]" "[anonymous]" (pp_string e1);
       t_shift ~name:"sorry" (); (
-        let sorry_decl = Env.get_decl env @@ L.Name.mk @@ L.Name.Str "sorry" in
+        let sorry_decl = Env.get_decl env @@ L.Name.mk @@ L.NStr "sorry" in
         let sorry = Parse.expr env ios "sorry" |> fst in
         Decl.get_kind sorry_decl |> int_of_kind |> string_of_int |> t_print;
         Decl.get_type sorry_decl |> t_pp_print;
@@ -342,8 +342,8 @@ let t_internal_parse =
       let nat = get "nat" in
       let forall_n_eq_n_n =
         let open L.Expr in
-        mk_forall ("n" |: nat) (fun n -> lean_eq ~ty:nat n n) in
-      LeanEnv.add_proof_obligation forall_n_eq_n_n;
+        mk_forall ("n" |: nat) (fun n -> view @@ lean_eq ~ty:nat n n) in
+      LeanEnv.add_proof_obligation @@ L.Expr.mk forall_n_eq_n_n;
       LeanEnv.add_proof_obligation (mk_GGen |=| mk_GGen);
       LeanEnv.proof_obligations_to_string () |> t_long_print;
       LeanEnv.export_proof_obligations "foo.olean"; 
