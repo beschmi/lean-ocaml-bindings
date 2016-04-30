@@ -93,9 +93,9 @@ module type List = sig
   val of_list : t list -> list_t
 
   val ( @: )  : t -> list_t -> list_t
-  val ( ! )   : t -> list_t         
+  val ( ! )   : t -> list_t
 end
-         
+
 (* ** Names *)
 
 module Name : sig
@@ -124,7 +124,6 @@ module ListName : List with
 (* ** Options *)
 
 module Options : sig
-
   val mk_empty : unit -> options
 
   val join : options -> options -> options
@@ -147,13 +146,11 @@ module Options : sig
   val contains : options -> name -> bool
 
   val to_string : options -> string
-
 end
 
 (* ** Universe *)
 
 module Univ : sig
-
   val mk_zero   : unit -> univ
   val mk_succ   : univ -> univ
   val mk_max    : univ -> univ -> univ
@@ -178,14 +175,14 @@ module Univ : sig
   val kind : univ -> univ_kind
 
   val get_name : univ -> name
-                           
+
   val instantiate : univ -> list_name -> list_univ -> univ
 end
 
 module ListUniv : List with
   type t = univ and
   type list_t = list_univ
-                         
+
 (* ** Expression *)
 
 module Expr : sig
@@ -205,7 +202,7 @@ module Expr : sig
 
   val to_string : expr -> string
   val get_kind  : expr -> expr_kind
-                           
+
   val eq       : expr -> expr -> bool
   val lt       : expr -> expr -> bool
   val quick_lt : expr -> expr -> bool
@@ -233,7 +230,7 @@ end
 module ListExpr : List with
   type t = expr and
   type list_t = list_expr
-                       
+
 (* ** Environment *)
 
 module Env : sig
@@ -270,7 +267,7 @@ module Env : sig
   val import : env -> ios -> list_name -> env
   val export : env -> olean_file:string -> unit
 end
-               
+
 (* ** IO state *)
 
 module Ios : sig
@@ -285,7 +282,7 @@ module Ios : sig
   val reset_regular    : ios -> unit
   val reset_diagnostic : ios -> unit
 end
-               
+
 (* ** Inductive types *)
 
 module IndType : sig
@@ -294,29 +291,29 @@ module IndType : sig
 
   val get_name          : ind_type -> name
   val get_type          : ind_type -> expr
-  val get_constructors  : ind_type -> list_expr                                       
+  val get_constructors  : ind_type -> list_expr
 end
-                         
+
 module ListIndType : List with
   type t = ind_type and
   type list_t = list_ind_type
-                             
+
 (* ** Inductive declarations *)
 
 module IndDecl : sig
   val mk              : list_name -> Unsigned.uint -> list_ind_type -> ind_decl
   val get_univ_params : ind_decl -> list_name
-  val get_num_params  : ind_decl -> Unsigned.uint 
+  val get_num_params  : ind_decl -> Unsigned.uint
   val get_types       : ind_decl -> list_ind_type
 end
-                         
+
 (* ** Modules *)
 
 module Module : sig
   val get_std_path  : unit -> string
   val get_hott_path : unit -> string
 end
-                  
+
 (* ** Parser *)
 
 module Parse : sig
@@ -324,7 +321,7 @@ module Parse : sig
   val commands : env -> ios -> string -> env * ios
   val expr : env -> ios -> string -> expr * list_name
 end
-                  
+
 (* ** Type checker *)
 
 module TypeChecker : sig
@@ -346,7 +343,7 @@ module Decl : sig
                  -> height:Unsigned.uint -> normalized:bool -> decl
 
   val mk_def_with : env -> name -> univ_params:list_name -> ty:expr -> value:expr
-                    -> normalized:bool -> decl                         
+                    -> normalized:bool -> decl
 
   val mk_thm      : name -> univ_params:list_name -> ty:expr -> value:expr
                     -> height:Unsigned.uint -> decl
@@ -363,5 +360,3 @@ module Decl : sig
   val get_conv_opt    : decl -> bool
   val check           : env -> decl -> cert_decl
 end
-                
-                       

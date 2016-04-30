@@ -191,7 +191,7 @@ let from_binder_kind bk =
     | Binder_strict_implicit -> binder_strict_implicit
     | Binder_inst_implicit   -> binder_inst_implicit
   )
-                   
+
 (* *** Declaration kinds *)
 
 type decl_kind =
@@ -205,17 +205,17 @@ let to_decl_kind c =
     if      c = decl_const then Decl_const
     else if c = decl_axiom then Decl_axiom
     else if c = decl_def   then Decl_def
-    else if c = decl_thm   then Decl_thm                                 
+    else if c = decl_thm   then Decl_thm
     else assert false
   )
 
 let from_decl_kind dk =
   LeanT.Decl_kind.(
-    match dk with      
-    | Decl_const -> decl_const 
-    | Decl_axiom -> decl_axiom 
-    | Decl_def   -> decl_def 
-    | Decl_thm   -> decl_thm 
+    match dk with
+    | Decl_const -> decl_const
+    | Decl_axiom -> decl_axiom
+    | Decl_def   -> decl_def
+    | Decl_thm   -> decl_thm
   )
 
 (* ** Finalizers *)
@@ -224,7 +224,7 @@ let deref_ptr finaliser e_p =
   let e = !@e_p in
   Gc.finalise finaliser e;
   e
-                                        
+
 let deref_exception_ptr     = deref_ptr B.exception_del
 
 let deref_name_ptr          = deref_ptr B.name_del
@@ -242,7 +242,7 @@ let deref_expr_ptr          = deref_ptr B.expr_del
 let deref_list_expr_ptr     = deref_ptr B.list_expr_del
 
 let deref_macro_def_ptr     = deref_ptr B.macro_def_del
-                              
+
 let deref_env_ptr           = deref_ptr B.env_del
 
 let deref_decl_ptr          = deref_ptr B.decl_del
@@ -304,10 +304,10 @@ let with_ind_type      = with_wrapper B.ind_type_allocate      deref_ind_type_pt
 let with_list_ind_type = with_wrapper B.list_ind_type_allocate deref_list_ind_type_ptr
 let with_ind_decl      = with_wrapper B.ind_decl_allocate      deref_ind_decl_ptr
 let with_type_checker  = with_wrapper B.type_checker_allocate  deref_type_checker_ptr
- 
+
 let with_env_and_ios = with_pair_wrapper
   B.env_allocate B.ios_allocate deref_env_ptr deref_ios_ptr
-                         
+
 let with_expr_and_list_name = with_pair_wrapper
   B.expr_allocate B.list_name_allocate deref_expr_ptr deref_list_name_ptr
 
@@ -322,7 +322,7 @@ let with_bool_and_cnstr_seq = with_pair_wrapper
 module type ListBase = sig
   type t
   type list_t
-                            
+
   val mk_nil  : unit -> list_t
   val mk_cons : t -> list_t -> list_t
 
@@ -341,7 +341,7 @@ module type List = sig
   val ( @: ) : t -> list_t -> list_t
   val ( ! ) : t -> list_t
 end
-                                              
+
 module ListMake (X : ListBase) = struct
   include X
 
@@ -356,7 +356,7 @@ module ListMake (X : ListBase) = struct
     | x :: xs -> mk_cons x (of_list xs)
     | _ -> mk_nil ()
 end
-                   
+
 (* ** Name *)
 
 module Name = struct
@@ -381,7 +381,7 @@ end
 module ListName = ListMake (struct
   type t = name
   type list_t = list_name
-                  
+
   let mk_nil  ()   = with_list_name B.list_name_mk_nil
   let mk_cons n ln = with_list_name (B.list_name_mk_cons n ln)
 
@@ -399,13 +399,13 @@ module Options = struct
   let mk_empty () = with_options B.options_mk_empty
 
   let join o1 o2 = with_options (B.options_join o1 o2)
- 
+
   let set_bool   o n b = with_options (fun o_p e_p -> B.options_set_bool o n (from_bool b) o_p e_p)
   let set_int    o n i = with_options (B.options_set_int o n i)
   let set_uint   o n i = with_options (B.options_set_uint o n i)
   let set_double o n d = with_options (B.options_set_double o n d)
   let set_string o n s = with_options (B.options_set_string o n s)
- 
+
   let get_bool   o n = with_bool   (B.options_get_bool o n)
   let get_int    o n = with_int    (B.options_get_int o n)
   let get_uint   o n = with_uint   (B.options_get_uint o n)
@@ -413,9 +413,9 @@ module Options = struct
   let get_string o n = with_string (B.options_get_string o n)
 
   let eq o1 o2 = to_bool (B.options_eq o1 o2)
-  
+
   let empty o = to_bool (B.options_empty o)
-  
+
   let contains o n = to_bool (B.options_contains o n)
 
   let to_string o = with_string (B.options_to_string o)
@@ -428,14 +428,14 @@ module Univ = struct
   let mk_succ u     = with_univ (B.univ_mk_succ u)
   let mk_max  u1 u2 = with_univ (B.univ_mk_max u1 u2)
   let mk_imax u1 u2 = with_univ (B.univ_mk_imax u1 u2)
-  let mk_param n    = with_univ (B.univ_mk_param n) 
-  let mk_global n   = with_univ (B.univ_mk_global n) 
-  let mk_meta n     = with_univ (B.univ_mk_meta n) 
+  let mk_param n    = with_univ (B.univ_mk_param n)
+  let mk_global n   = with_univ (B.univ_mk_global n)
+  let mk_meta n     = with_univ (B.univ_mk_meta n)
 
-  let get_pred u    = with_univ (B.univ_get_pred u) 
-  let get_max_lhs u = with_univ (B.univ_get_max_lhs u) 
-  let get_max_rhs u = with_univ (B.univ_get_max_rhs u) 
-  let normalize u   = with_univ (B.univ_normalize u) 
+  let get_pred u    = with_univ (B.univ_get_pred u)
+  let get_max_lhs u = with_univ (B.univ_get_max_lhs u)
+  let get_max_rhs u = with_univ (B.univ_get_max_rhs u)
+  let normalize u   = with_univ (B.univ_normalize u)
 
   let eq       u1 u2 = with_bool (B.univ_eq u1 u2)
   let lt       u1 u2 = with_bool (B.univ_lt u1 u2)
@@ -461,7 +461,7 @@ module ListUniv = ListMake (struct
 
   let mk_nil ()    = with_list_univ B.list_univ_mk_nil
   let mk_cons u lu = with_list_univ (B.list_univ_mk_cons u lu)
-  
+
   let head lu = with_univ (B.list_univ_head lu)
   let tail lu = with_list_univ (B.list_univ_tail lu)
 
@@ -490,7 +490,7 @@ module Expr = struct
 
   let to_string e               = with_string (B.expr_to_string e)
   let get_kind e                = B.expr_get_kind e |> to_expr_kind
-                                       
+
   let eq       u1 u2            = with_bool (B.expr_eq u1 u2)
   let lt       u1 u2            = with_bool (B.expr_lt u1 u2)
   let quick_lt u1 u2            = with_bool (B.expr_quick_lt u1 u2)
@@ -521,7 +521,7 @@ module ListExpr = ListMake (struct
 
   let mk_nil ()    = with_list_expr B.list_expr_mk_nil
   let mk_cons u lu = with_list_expr (B.list_expr_mk_cons u lu)
-  
+
   let head lu = with_expr (B.list_expr_head lu)
   let tail lu = with_list_expr (B.list_expr_tail lu)
 
@@ -529,7 +529,7 @@ module ListExpr = ListMake (struct
 
   let eq lu1 lu2 = with_bool (B.list_expr_eq lu1 lu2)
 end)
-                
+
 (* ** Environment *)
 
 module Env =  struct
@@ -550,8 +550,8 @@ module Env =  struct
   let get_decl e n = with_decl (B.env_get_decl e n)
 
   let is_descendant e1 e2 = B.env_is_descendant e1 e2 |> to_bool
-                                                    
-  let forget e = with_env (B.env_forget e)                        
+
+  let forget e = with_env (B.env_forget e)
 
   (* Inductives *)
 
@@ -572,24 +572,24 @@ module Env =  struct
   let import env ios modules = with_env (B.env_import env ios modules)
   let export env ~olean_file = with_unit (B.env_export env olean_file)
 end
-                
+
 (* ** IO state *)
 
 module Ios = struct
   let mk_std      options = with_ios (B.ios_mk_std options)
   let mk_buffered options = with_ios (B.ios_mk_buffered options)
 
-  let set_options ios options = with_unit (B.ios_set_options ios options) 
+  let set_options ios options = with_unit (B.ios_set_options ios options)
 
   let is_std           ios = B.ios_is_std ios |> to_bool
   let get_options      ios = with_options (B.ios_get_options ios)
   let get_regular      ios = with_string (B.ios_get_regular ios)
   let get_diagnostic   ios = with_string (B.ios_get_diagnostic ios)
-  let reset_regular    ios = with_unit (B.ios_reset_regular ios) 
-  let reset_diagnostic ios = with_unit (B.ios_reset_diagnostic ios) 
-                                      
-(* FIXME : exception in input 
-  val exception_to_pp_string : env -> ios -> exc -> string *)               
+  let reset_regular    ios = with_unit (B.ios_reset_regular ios)
+  let reset_diagnostic ios = with_unit (B.ios_reset_diagnostic ios)
+
+(* FIXME : exception in input
+  val exception_to_pp_string : env -> ios -> exc -> string *)
 end
 
 (* ** Inductive types *)
@@ -602,7 +602,7 @@ module IndType = struct
  let get_type itype = with_expr(B.ind_type_get_type itype)
  let get_constructors itype = with_list_expr(B.ind_type_get_constructors itype)
 end
-  
+
 (* ** Inductive type list *)
 
 module ListIndType = ListMake (struct
@@ -617,16 +617,16 @@ module ListIndType = ListMake (struct
   let head list_itype  = with_ind_type(B.list_ind_type_head list_itype)
   let tail list_itype  = with_list_ind_type(B.list_ind_type_tail list_itype)
 end)
-  
+
 (* ** Inductive declarations *)
 
 module IndDecl = struct
  let mk ns i list_itypes = with_ind_decl (B.ind_decl_mk ns i list_itypes)
-     
+
  let get_univ_params idecl = with_list_name     (B.ind_decl_get_univ_params idecl)
  let get_num_params  idecl = with_uint          (B.ind_decl_get_num_params idecl)
  let get_types       idecl = with_list_ind_type (B.ind_decl_get_types idecl)
-end  
+end
 
 (* ** Modules *)
 
@@ -634,7 +634,7 @@ module Module = struct
   let get_std_path  () = with_string (B.get_std_path)
   let get_hott_path () = with_string (B.get_hott_path)
 end
-                  
+
 (* ** Parser *)
 
 module Parse = struct
@@ -651,8 +651,8 @@ module TypeChecker = struct
   let check ty_chkr expr      = with_expr_and_cnstr_seq (B.type_checker_check ty_chkr expr)
   let whnf  ty_chkr expr      = with_expr_and_cnstr_seq (B.type_checker_whnf  ty_chkr expr)
   let is_def_eq ty_chkr e1 e2 = with_bool_and_cnstr_seq (B.type_checker_is_def_eq ty_chkr e1 e2)
-end 
-                       
+end
+
 (* ** Declarations *)
 
 module Decl = struct
@@ -665,7 +665,7 @@ module Decl = struct
     with_decl (B.decl_mk_def n univ_params ty value height !normalized)
 
   let mk_def_with env n ~univ_params ~ty ~value ~normalized =
-    with_decl (B.decl_mk_def_with env n univ_params ty value !normalized)       
+    with_decl (B.decl_mk_def_with env n univ_params ty value !normalized)
 
   let mk_thm n ~univ_params ~ty ~value ~height =
     with_decl (B.decl_mk_thm n univ_params ty value height)

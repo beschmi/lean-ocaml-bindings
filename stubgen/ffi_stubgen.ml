@@ -8,7 +8,7 @@ let _ =
   match !generate_ml, !generate_c with
   | false, false
   | true, true ->
-    failwith "Exactly one of -ml and -c must be specified"
+    failwith "Exactly one of -ml or -c must be specified"
   | true, false ->
     Cstubs.write_ml Format.std_formatter ~prefix (module Ffi_bindings.Bindings)
   | false, true ->

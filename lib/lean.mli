@@ -23,6 +23,7 @@ type cnstr_seq           = LeanInternal.cnstr_seq
 type binder_kind         = LeanInternal.binder_kind
 
 (* ** View Modules Signatures *)
+
 module type BaseView = sig
   type t
   type view
@@ -30,16 +31,16 @@ module type BaseView = sig
   val str : t -> string
   val view : t -> view
   val mk   : view -> t
-end         
-module type BaseViewWithList =
-  (sig
-    include BaseView
-    type list_t
-    val view_list : list_t -> view list
-    val list_mk   : view list -> list_t
-  end)
-    
-(* ** Name *)    
+end
+
+module type BaseViewWithList = sig
+  include BaseView
+  type list_t
+  val view_list : list_t -> view list
+  val list_mk   : view list -> list_t
+end
+
+(* ** Name *)
 type name_view =
   | NAnon
   | NStr of string
@@ -51,9 +52,9 @@ module Name :
             type t = name and
             type list_t = list_name and
             type view = name_view
-end) 
-  
-(* ** Option *)           
+end)
+
+(* ** Option *)
 (* ** Universes *)
 module Univ :
 (sig
@@ -74,8 +75,8 @@ type expr_view =
     | ExprLambda   of name * expr * expr_view * binder_kind
     | ExprPi       of name * expr * expr_view * binder_kind
     | ExprMacro    of macro_def * (expr_view list)
-    | ExprLocal    of name * expr_view                           
-    | ExprLocalExt of name * name * expr_view * binder_kind    
+    | ExprLocal    of name * expr_view
+    | ExprLocalExt of name * name * expr_view * binder_kind
     | ExprMetavar  of name * expr_view
     | ExprRaw      of expr
 
@@ -92,22 +93,22 @@ module Expr :
   val ty_type   : expr
   val (|:)      : string -> expr -> string * expr
 end)
-  
-                                               
+
+
 (* ** IO state *)
 module Ios :
 (sig(*
   include BaseView*)
   val mk : ?options:options -> unit -> ios
 end)
-               
+
 (* ** Environment *)
 module Env :
 (sig(*
   include BaseView*)
   val mk : ?filenames:list_name -> ios -> env
 end)
-               
+
 (* ** Inductive type *)
 (* ** Inductive declaration *)
 (* ** Module *)
@@ -127,7 +128,7 @@ module Decl :
             type view = decl_view*)
   val to_string : ?pp: env * ios -> decl -> string
 end)
-                
+
 (* ** EnvParser *)
 
 module type LeanFiles = sig
@@ -141,7 +142,7 @@ module GetExprParser (LF : LeanFiles) : sig
   val to_pp_string : t -> string
   val get_type : t -> t
   val get     : string -> t
-  val get_with_univ_params : string -> t * list_name                            
+  val get_with_univ_params : string -> t * list_name
   val as_1ary : t -> t -> t
   val as_2ary : t -> t -> t -> t
   val as_nary : t -> t list -> t
@@ -150,11 +151,10 @@ module GetExprParser (LF : LeanFiles) : sig
   (* Nats and Integers *)
   val lint_of_int    : int -> t
   val lnat_of_posint : int -> t
-                       
-  (* Proof obligation generation *)                  
+
+  (* Proof obligation generation *)
   val add_proof_obligation :
     ?prefix:string -> ?name:string -> ?univ_params:list_name -> t -> unit
   val proof_obligations_to_string : unit -> string
   val export_proof_obligations : ?univ_params:list_name -> string -> unit
 end
-                         

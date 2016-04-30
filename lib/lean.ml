@@ -1,5 +1,5 @@
-
 (* * Lean (high-level) interface *)
+
 open Ctypes
 
 module LI = LeanInternal
@@ -26,23 +26,25 @@ type cnstr_seq           = LI.cnstr_seq
 type binder_kind         = LI.binder_kind
 
 (* ** View Modules Signatures *)
+
 module type BaseView = sig
   type t
   type view
-  val eq : t -> t -> bool
-  val str : t -> string
+  val eq   : t -> t -> bool
+  val str  : t -> string
   val view : t -> view
   val mk   : view -> t
-end         
-module type BaseViewWithList =
-  (sig
-    include BaseView
-    type list_t
-    val view_list : list_t -> view list
-    val list_mk   : view list -> list_t
-  end)
+end
+
+module type BaseViewWithList = sig
+  include BaseView
+  type list_t
+  val view_list : list_t -> view list
+  val list_mk   : view list -> list_t
+end
 
 let (@<) f g x = f @@ g x
+
 module AddListUtils (LeanList : LI.List) (View : BaseView with type t = LeanList.t)
        : (BaseViewWithList with type view = View.view and
                                 type t = View.t and
@@ -55,9 +57,9 @@ module AddListUtils (LeanList : LI.List) (View : BaseView with type t = LeanList
   let list_mk =
     LeanList.of_list @< List.map mk
 end
-                                                                        
+
 (* ** Name *)
-type name_view = 
+type name_view =
   | NAnon
   | NStr of string
   | NIdx of string * int
@@ -71,7 +73,7 @@ module Name =
       type view = name_view
       let eq = eq
       let str = to_string
-                 
+
       let view n =
         if      is_str n then NStr (get_str n)
         else if is_idx n then NIdx (get_str (get_prefix n), get_idx n)
@@ -85,13 +87,13 @@ module Name =
     end)
 
 let (!:) s = Name.mk @@ NStr s
-                                 
+
 (* ** Option *)
 (* ** Universe *)
 
 module UnivNoList = struct
   include LI.Univ
-  let str = to_string 
+  let str = to_string
   type t = univ
   type view = int
   let zero = mk_zero ()
@@ -111,7 +113,7 @@ module Univ = struct
   open UnivNoList
   let zero,one = zero,one
 end
-                
+
 
 (* ** Expression *)
 type expr_view =
@@ -122,8 +124,8 @@ type expr_view =
     | ExprLambda   of name * expr * expr_view * binder_kind
     | ExprPi       of name * expr * expr_view * binder_kind
     | ExprMacro    of macro_def * (expr_view list)
-    | ExprLocal    of name * expr_view                           
-    | ExprLocalExt of name * name * expr_view * binder_kind    
+    | ExprLocal    of name * expr_view
+    | ExprLocalExt of name * name * expr_view * binder_kind
     | ExprMetavar  of name * expr_view
     | ExprRaw      of expr
 
@@ -152,8 +154,8 @@ module ExprNoList = struct
     match envios with
     | Some (env,ios) -> to_pp_string env ios e
     | None -> str e
-                  
-  let bruijn = mk_var @< Unsigned.UInt.of_int                                   
+
+  let bruijn = mk_var @< Unsigned.UInt.of_int
   let mk_forall (s, ty) ?(binder_kind=LI.Binder_default) (f : expr -> view) =
     ExprPi (!:s, ty, f @@ bruijn 0, binder_kind)
   (* mk_pi !:s ~ty (f @@ bruijn 0) binder_kind *)
@@ -169,11 +171,11 @@ module Expr = struct
   open ExprNoList
   let pp, mk_forall, ty_prop, ty_type, (|:) = (pp, mk_forall, ty_prop, ty_type, (|:))
 end
-                
+
 (* ** IO state *)
 
 module Ios = struct
-  open LI.Ios         
+  open LI.Ios
   let mk ?(options= LI.Options.mk_empty ()) () =
     mk_std options
 end
@@ -201,7 +203,7 @@ type decl_view =
   | DeclConst of Name.t * Expr.ty
   | DeclDef   of Name.t * Expr.ty * Expr.t
   | DeclThm   of Name.t * Expr.ty * Expr.t
-                                      
+
 module Decl = struct
   let decl_kind_to_string = function
     | LI.Decl_axiom -> "axiom"
@@ -217,7 +219,7 @@ module Decl = struct
   let get_opt_value decl =
     if(has_value decl) then Some (LI.Decl.get_value decl)
     else None
-    
+
   let expr_to_string ?pp e =
     match pp with
       | None -> LI.Expr.to_string e
@@ -226,13 +228,13 @@ module Decl = struct
   let opt_value_to_string ?pp = function
     | Some e -> ((^) " := ") @@ expr_to_string ?pp e
     | None -> ""
-                
+
   let to_string ?pp decl =
     (LI.Decl.get_kind decl |> decl_kind_to_string) ^ " " ^
       (LI.Decl.get_name decl |> Name.str) ^ " : " ^
         (LI.Decl.get_type decl |> expr_to_string ?pp) ^
           (get_opt_value decl |> opt_value_to_string ?pp)
-            
+
   let mk_cert_def env ~name ?(univ_params = Name.list_mk []) ?(ty = Expr.ty_prop) value =
     let decl = LI.Decl.mk_def_with
                  env
@@ -255,17 +257,17 @@ module GetExprParser (LF : LeanFiles) = struct
   type t = LI.expr
   type _1ary = t -> t
   type _2ary = t -> t -> t
-  type _nary = t list -> t 
+  type _nary = t list -> t
 
   let to_string = LI.Expr.to_string
-                    
+
   let ios = ref @@
     Ios.mk ()
 
   let env_of_envios (env',ios') =
     ios := ios';
     env'
-                     
+
   let env =
     let env = Env.mk !ios in
     let module N = Name in
@@ -278,14 +280,14 @@ module GetExprParser (LF : LeanFiles) = struct
 
   let to_pp_string = LI.Expr.to_pp_string env !ios
 
-                                          
+
   let get_type =
     let ty_chkr = LI.TypeChecker.mk env in
     fst @< LI.TypeChecker.check ty_chkr
-                                          
+
   let get_with_univ_params s = LI.Parse.expr env !ios s
   let get s = fst @@ get_with_univ_params s
-                                  
+
   let as_nary app =
     let rec go le = function
       | [] -> le
@@ -317,7 +319,7 @@ module GetExprParser (LF : LeanFiles) = struct
     function
     | i when i >= 0 -> int_of_nat @@ lnat_of_posint i
     | i -> neg_succ_of_nat @@ lnat_of_posint (-i -1)
-                                                                                                 
+
   (* Proof obligation generation *)
   let output_env = ref env
   let added_proof_obligations : expr list ref = ref []
@@ -326,12 +328,12 @@ module GetExprParser (LF : LeanFiles) = struct
     let i = try Hashtbl.find names_db s with Not_found -> 0 in
     Hashtbl.replace names_db s (i+1);
     string_of_int (i+1)
-                    
+
   let proof_obligation_name = "proof_obligation"
-                                
+
   let gen_unique_name prefix =
     prefix ^ "_" ^ (get_and_incr prefix)
-                         
+
   let add_proof_obligation
         ?(prefix = "PO")
         ?(name = gen_unique_name prefix)
@@ -353,9 +355,9 @@ module GetExprParser (LF : LeanFiles) = struct
         (s ^ "(" ^ (string_of_int i) ^ ") " ^ (_no_nl @@ LI.Expr.to_pp_string !output_env ios po) ^ "\n",
          i+1))
       ("",1) @@ List.rev !added_proof_obligations
-      
+
   let _and = get "and" |> as_2ary
-                            
+
   let export_proof_obligations ?univ_params filename =
     let all_POs = List.rev !added_proof_obligations in
     let env = !output_env in
