@@ -2,3 +2,15 @@ configure
 myocamlbuild.ml
 _tags
 Makefile
+bindings/META
+bindings/lean_bindings.mldylib
+bindings/lean_bindings.mllib
+lib/META
+lib/_build/_digests
+lib/_build/_log
+lib/lean.mldylib
+lib/lean.mllib
+lib/liblean_stubs.clib
+lib_test/test_lean_api.c
+setup.data
+setup.ml
