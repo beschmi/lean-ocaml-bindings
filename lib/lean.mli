@@ -1,8 +1,11 @@
-(* * Lean (high-level) interface *)
+(* * Lean (high-level) interface. *)
+(** This module exports a high-level interface to the Lean API. *)
+
+open LeanUtil
 
 (* ** Types *)
+(** {1 Type abbreviations } *)
 
-type uint                = Unsigned.UInt.t
 type name                = LeanInternal.name
 type list_name           = LeanInternal.list_name
 type options             = LeanInternal.options
@@ -22,92 +25,259 @@ type type_checker        = LeanInternal.type_checker
 type cnstr_seq           = LeanInternal.cnstr_seq
 type binder_kind         = LeanInternal.binder_kind
 
-(* ** View Modules Signatures *)
-
-module type BaseView = sig
-  type t
-  type view
-  val eq : t -> t -> bool
-  val str : t -> string
-  val view : t -> view
-  val mk   : view -> t
-end
-
-module type BaseViewWithList = sig
-  include BaseView
-  type list_t
-  val view_list : list_t -> view list
-  val list_mk   : view list -> list_t
-end
+(** {1 Submodules } *)
 
 (* ** Name *)
-type name_view =
-  | NAnon
-  | NStr of string
-  | NIdx of string * int
 
-module Name :
-(sig
-  include BaseViewWithList with
-            type t = name and
-            type list_t = list_name and
-            type view = name_view
-end)
+(** Manipulating Lean names (lists of strings/numbers). *)
+module Name : sig
+  type view =
+    | Anon                 (** [Anon]: The anonymous name. *)
+    | Str of name * string (** [Str(n,s)]: the name [n.s].   *)
+    | Idx of name * uint   (** [Idx(n,i)]: the name [n.i].   *)
 
-(* ** Option *)
+  (** Convert [name] into [view]. *)
+  val view : name -> view
+
+  (** Create anonymous [name]. *)
+  val mk_anon : unit -> name
+
+  (** Append [string] to [name]. *)
+  val append_str : name -> str:string -> name
+
+  (** Append [uint] index to [name]. *)
+  val append_idx : name -> idx:uint -> name
+
+  (** Create name for given string. Appends string to anonymous name. *)
+  val mk_str : string -> name
+
+  (** Create name for given string and index. Appends index to anonymous name. *)
+  val mk_idx : string -> uint -> name
+
+  (** Test if given [name]s are equal. *)
+  val eq : name -> name -> bool
+
+  (** Test if first [name] is smaller than second [name]. *)
+  val lt : name -> name -> bool
+
+  (** Test (quickly) if first [name] is smaller than second [name].
+      (FIXME: document difference to [lt]) *)
+  val quick_lt : name -> name -> bool
+  
+  (** Convert [name] to [string]. *)
+  val to_string : name -> string
+
+  (** Unsafe pointer conversion for calling into OCaml from C. *)
+  include (LeanInternal.UnsafeVoidp with type t := name)
+
+  (** Lists of names. *)
+  module List : (module type of LeanInternal.ListName)
+end
+
 (* ** Universes *)
-module Univ :
-(sig
-  include BaseViewWithList with
-            type t = univ and
-            type list_t = list_univ and
-            type view = int
-  val zero : t
-  val one : t
-end)
+
+(** Manipulating Lean universe expressions. *)
+module Univ : sig
+  (* It's nicer to have all types directly included for ocamldoc.
+  include (module type of LeanInternal.Univ) *)
+  type t = univ
+
+  (** Create the zero universe. *)
+  val mk_zero : unit -> t
+
+  (** Create the successor of the given universe. *)
+  val mk_succ : t -> t
+
+  (** Create universe denoting the maximum of the given universes. *)
+  val mk_max : t -> t -> t
+
+  (** Create universe denoting the [Imax] of the given universes. *)
+  val mk_imax : t -> t -> t
+
+  (** Create the universe parameter with the given name. *)
+  val mk_param : name -> t
+
+  (** Create a global universe with the given name. *)
+  val mk_global : name -> t
+
+  (** Create a universe meta-variable with the given name. *)
+  val mk_meta : name -> t
+  
+  (** Return the normal-form of the given universe. *)
+  val normalize : t -> t
+
+  (** Test equality of given universes. *)
+  val eq : t -> t -> bool
+
+  (** Test if first [universe] is smaller than second [universe]. *)
+  val lt : t -> t -> bool
+ 
+  (** Test (quickly) if first [name] is smaller than second [name].
+      (FIXME: document difference to [lt]) *) 
+  val quick_lt : t -> t -> bool
+
+  (** Test if first [universe] is greater-or equal than second [universe]. *)
+  val geq : t -> t -> bool
+
+  (** Convert [universe] to [string]. *)
+  val to_string : t -> string
+
+  (** Convert [universe] to [string] with given [options]. *)
+  val to_string_using : t -> options -> string
+
+  (** Instantiate the parameters with the given universes. *)
+  val instantiate : t -> list_name -> list_univ -> t
+
+  (** View for universe. *)
+  type view =
+    | Zero                  (** [Zero]: The zero universe. *)
+    | Succ   of univ        (** [Succ(u)]: Successor of the universe [u]. *)
+    | Max    of univ * univ (** [Max(u1,u2)]: Maximum of [u1] and [u2]. *)
+    | Imax   of univ * univ (** [IMax(u1,u2)]: Denotes [u2] if [u2=Zero], otherwise [Max u1 u2] *)
+    | Param  of name        (** [Param]: Universe parameter with the given name. *)
+    | Global of name        (** [Global]: Reference to a global universe. *)
+    | Meta   of name        (** [Meta]: Meta variable with the given name. *)
+
+  (** Convert [univ] into [view]. *)
+  val view : univ -> view
+
+  (** Unsafe pointer conversion for calling into OCaml from C. *)
+  include (LeanInternal.UnsafeVoidp with type t := univ)
+
+  (** Lists of universes. *)
+  module List : (module type of LeanInternal.ListUniv)
+end
+
+(* ** Local const *)
+
+(** Expressions denoting local constants. We use this to refine the
+    types in our interfaces. *)
+module LocalConst : sig
+  type t
+
+  (** Get expression representing the given local constant. *)
+  val to_expr : t -> expr
+
+  (** Create local constant with given name and type. *)
+  val mk_local_const : name -> expr -> t
+
+  (** Create local constant with additional parameters. *)
+  val mk_local_const_ext : binder_kind -> name -> name -> expr -> t
+
+  (** Get the binder-kind of the given local constant. *)
+  val binder_kind : t -> binder_kind
+
+  (** Get the name of the given local constant. *)
+  val name : t -> name
+
+  (** Get the pretty-printing name of the given local constant. *)
+  val pp_name : t -> name
+
+  (** Get the type of the given local constant. *)
+  val ty : t -> expr
+end
 
 (* ** Expression *)
-type expr_view =
-    | ExprVar      of uint
-    | ExprSort     of univ
-    | ExprConst    of name * list_univ (* Univ.expr_view list *)
-    | ExprApp      of expr_view * expr_view
-    | ExprLambda   of name * expr * expr_view * binder_kind
-    | ExprPi       of name * expr * expr_view * binder_kind
-    | ExprMacro    of macro_def * (expr_view list)
-    | ExprLocal    of name * expr_view
-    | ExprLocalExt of name * name * expr_view * binder_kind
-    | ExprMetavar  of name * expr_view
-    | ExprRaw      of expr
 
-module Expr :
-(sig
-  include BaseViewWithList with
-            type t = expr and
-            type list_t = list_expr and
-            type view = expr_view
-  type ty = t
-  val pp : ?envios : env * ios -> t -> string
-  val mk_forall : string * expr -> ?binder_kind : binder_kind-> (expr -> view) -> view
-  val ty_prop   : expr
-  val ty_type   : expr
-  val (|:)      : string -> expr -> string * expr
-end)
+(** Manipulating Lean expressions. *)
+module Expr : sig
 
+  (** Create a bound variable with the given de-Bruijn index. *)
+  val mk_var : uint -> expr
+
+  (** Create type for the given universe *)
+  val mk_sort : univ -> expr
+
+  (** Create a constant with given name and universe parameters *)
+  val mk_const : name -> list_univ -> expr
+
+  (** Create a function application for the given expressions. *)
+  val mk_app : expr -> expr -> expr
+
+  (** [mk_lamba bk n ~ty:t e] Creates a a lambda abstraction with binder-kind
+      [bk], variable with name [n] of type [t], and body [e].
+      The lambda-bound variable  *)
+  val mk_lambda : binder_kind -> name -> ty:expr -> expr -> expr
+
+  (** [mk_pi bk n ~ty:t e] Creates a pi abstraction with binder-kind
+      [bk], variable with name [n] of type [t], and body [e].
+      The lambda-bound variable  *)
+  val mk_pi : binder_kind  -> name -> ty:expr -> expr -> expr
+
+  (** [mk_pi bk n ~ty:t e] Creates a macro application to the given
+      list of expressions. *)
+  val mk_macro : macro_def -> list_expr -> expr
+
+  (** Creates an expression from the local constant with the given name and type. *)
+  val mk_local : name -> expr -> expr
+
+  (** Creates an expression from the local constant with the given additional parameters. *)
+  val mk_local_ext : name -> name -> expr -> binder_kind -> expr
+
+  (** Creates a meta-variable with the given name and type. *)
+  val mk_metavar : name -> expr -> expr
+
+  (** Test equality of given expressions. *)
+  val eq : expr -> expr -> bool
+
+  (** Test equality of given macro definitions. *)
+  val macro_def_eq : macro_def -> macro_def -> bool
+
+  (** Test if first [expr] is smaller than second [expr]. *)
+  val lt : expr -> expr -> bool
+
+  (** Test (quickly) if first [expr] is smaller than second [expr].
+      (FIXME: document difference to [lt]) *) 
+  val quick_lt : expr -> expr -> bool
+
+  (** Convert [expr] to [string]. *)
+  val to_string : expr -> string
+
+  (** Convert [expr] to [string] with given [env] and [ios]. *)
+  val to_pp_string : env -> ios -> expr -> string
+
+  (** Convert [macro_def] to [string]. *)
+  val macro_def_to_string : macro_def -> string
+
+  (** View for expression. *)
+  type view =
+    | Var    of uint
+    | Sort   of univ
+    | Const  of name * list_univ
+    | Local  of LocalConst.t
+    | Meta   of name * expr
+    | App    of expr * expr
+    | Lambda of binder_kind * name * expr * expr
+    | Pi     of binder_kind * name * expr * expr
+    | Macro  of macro_def * list_expr
+    | Let    of unit (* FIXME *)
+
+  (** Convert [expr] into [view]. *)
+  val view : expr -> view
+
+  (** Unsafe pointer conversion for calling into OCaml from C. *)
+  include (LeanInternal.UnsafeVoidp with type t := expr)
+
+  (** Lists of expressions. *)
+  module List : (module type of LeanInternal.ListExpr)
+end  
+
+(* ** Option *)
 
 (* ** IO state *)
-module Ios :
-(sig(*
+
+(*
+module Ios : sig(*
   include BaseView*)
   val mk : ?options:options -> unit -> ios
-end)
+end
 
 (* ** Environment *)
-module Env :
-(sig(*
+
+module Env : sig(*
   include BaseView*)
   val mk : ?filenames:list_name -> ios -> env
-end)
+end
 
 (* ** Inductive type *)
 (* ** Inductive declaration *)
@@ -115,19 +285,19 @@ end)
 (* ** Parser *)
 (* ** Type checker *)
 (* ** Declaration *)
+
 type decl_view =
   | DeclAxiom of Name.t * Expr.ty
   | DeclConst of Name.t * Expr.ty
   | DeclDef   of Name.t * Expr.ty * Expr.t
   | DeclThm   of Name.t * Expr.ty * Expr.t
 
-module Decl :
-(sig(*
+module Decl : sig(*
   include BaseView with
             type t = decl and
             type view = decl_view*)
   val to_string : ?pp: env * ios -> decl -> string
-end)
+end
 
 (* ** EnvParser *)
 
@@ -158,3 +328,4 @@ module GetExprParser (LF : LeanFiles) : sig
   val proof_obligations_to_string : unit -> string
   val export_proof_obligations : ?univ_params:list_name -> string -> unit
 end
+*)

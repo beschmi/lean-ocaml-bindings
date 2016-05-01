@@ -52,13 +52,13 @@ module Types (F: Cstubs.Types.TYPE) = struct
     let binder_strict_implicit = constant "LEAN_BINDER_STRICT_IMPLICIT" int
     let binder_inst_implicit   = constant "LEAN_BINDER_INST_IMPLICIT"   int
   end
-                         
-  module Decl_kind = struct    
-    let decl_const = constant "LEAN_DECL_CONST" int 
-    let decl_axiom = constant "LEAN_DECL_AXIOM" int 
+
+  module Decl_kind = struct
+    let decl_const = constant "LEAN_DECL_CONST" int
+    let decl_axiom = constant "LEAN_DECL_AXIOM" int
     let decl_def   = constant "LEAN_DECL_DEF"   int
     let decl_thm   = constant "LEAN_DECL_THM"   int
-  end 
+  end
 
   let trust_high = constant "LEAN_TRUST_HIGH" int
 
@@ -77,23 +77,26 @@ module Bindings (F : Cstubs.FOREIGN) = struct
   let uint_allocate   () = allocate uint (Unsigned.UInt.of_int 0)
   let double_allocate () = allocate double 0.0
   let int_allocate    () = allocate int 0
- 
+
 (* *** Typedefs *)
 
   module Typedef (TN : sig val type_name : string end) : sig
     type t
     val t : t Ctypes.typ
     val allocate : ?finalise:(t -> unit) -> unit -> t ptr
+    val unsafe_to_voidp   : t -> unit ptr
+    val unsafe_from_voidp : unit ptr -> t
   end = struct
     type t = unit ptr
     let t = typedef (ptr void) TN.type_name
-
     let allocate ?finalise () =
       let finalise = match finalise with
         | Some f -> Some (fun p -> f !@p)
         | None   -> None
       in
       allocate ?finalise t null
+    let unsafe_to_voidp p = p
+    let unsafe_from_voidp p = p
   end
 
   module Exception     = Typedef(struct let type_name = "lean_exception"           end)
@@ -513,7 +516,7 @@ module Bindings (F : Cstubs.FOREIGN) = struct
 
   let decl_del = foreign "lean_decl_del" (decl @-> returning void)
 
-  let cert_decl_del = foreign "lean_cert_decl_del" (cert_decl @-> returning void) 
+  let cert_decl_del = foreign "lean_cert_decl_del" (cert_decl @-> returning void)
 
 (* *** Lean environment *)
 
@@ -782,8 +785,7 @@ module Bindings (F : Cstubs.FOREIGN) = struct
   let decl_get_conv_opt = foreign
    "lean_decl_get_conv_opt" (decl @-> ptr lean_bool @-> ptr exc @-> ret_bool)
 
-  let decl_check = foreign 
-   "lean_decl_check" (env @-> decl @-> ptr cert_decl @-> ptr exc @-> ret_bool)  
+  let decl_check = foreign
+   "lean_decl_check" (env @-> decl @-> ptr cert_decl @-> ptr exc @-> ret_bool)
 
 end
-                                         

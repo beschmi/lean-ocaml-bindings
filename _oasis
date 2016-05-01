@@ -10,14 +10,15 @@ BuildTools:     ocamlbuild
 Library lean
   Path:             lib
   FindlibName:      lean
-  Modules:          LeanInternal, Lean
+  Modules:          LeanInternal, Lean, LeanUtil
   InternalModules:  Ffi_generated, Ffi_generated_types
   CSources:         ffi_generated_stubs.c
   CCOpt:            -I $pkg_ctypes_stubs
-  CCLib:            -lleanshared
   ByteOpt:          -warn-error +1..45
   NativeOpt:        -warn-error +1..45
   BuildDepends:     lean_bindings
+  # Uncomment for code coverage
+  # BuildDepends:     lean_bindings, bisect_ppx
 
 Library lean_bindings
   Install:          true
@@ -25,7 +26,7 @@ Library lean_bindings
   Modules:          Ffi_bindings
   ByteOpt:          -warn-error +1..45
   NativeOpt:        -warn-error +1..45
-  BuildDepends:     ctypes, ctypes.stubs, ctypes.foreign
+  BuildDepends:     ctypes, ctypes.stubs
 
 Executable ffi_stubgen
   Install:        false
@@ -48,16 +49,19 @@ Executable test_lean
   Path:           lib_test
   MainIs:         test_lean.ml
   CompiledObject: best
+  CCLib:          -lleanshared
   ByteOpt:        -warn-error +1..45
   NativeOpt:      -warn-error +1..45
   BuildDepends:   lean, oUnit
+  # Uncomment below for code coverage
+  # BuildDepends:   lean, oUnit, bisect_ppx
 
 Test test_lean
   Command: $test_lean -runner sequential
 
-#Document lean
-#  Type:                 ocamlbuild (0.4)
-#  BuildTools:           ocamldoc
-#  Title:                API reference for Lean
-#  XOCamlBuildPath:      .
-#  XOCamlBuildLibraries: lean
+Document lean
+  Type:                 ocamlbuild (0.4)
+  BuildTools:           ocamldoc
+  Title:                API reference for Lean bindings
+  XOCamlBuildPath:      .
+  XOCamlBuildLibraries: lean

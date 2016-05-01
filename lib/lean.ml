@@ -1,11 +1,12 @@
 (* * Lean (high-level) interface *)
 
 open Ctypes
+open LeanUtil
 
 module LI = LeanInternal
 
 (* ** Types *)
-type uint                = Unsigned.UInt.t
+
 type name                = LI.name
 type list_name           = LI.list_name
 type options             = LI.options
@@ -25,155 +26,113 @@ type type_checker        = LI.type_checker
 type cnstr_seq           = LI.cnstr_seq
 type binder_kind         = LI.binder_kind
 
-(* ** View Modules Signatures *)
-
-module type BaseView = sig
-  type t
-  type view
-  val eq   : t -> t -> bool
-  val str  : t -> string
-  val view : t -> view
-  val mk   : view -> t
-end
-
-module type BaseViewWithList = sig
-  include BaseView
-  type list_t
-  val view_list : list_t -> view list
-  val list_mk   : view list -> list_t
-end
-
-let (@<) f g x = f @@ g x
-
-module AddListUtils (LeanList : LI.List) (View : BaseView with type t = LeanList.t)
-       : (BaseViewWithList with type view = View.view and
-                                type t = View.t and
-                                type list_t = LeanList.list_t)
-  = struct
-  include View
-  type list_t = LeanList.list_t
-  let view_list =
-    List.map view @< LeanList.to_list
-  let list_mk =
-    LeanList.of_list @< List.map mk
-end
-
 (* ** Name *)
-type name_view =
-  | NAnon
-  | NStr of string
-  | NIdx of string * int
 
-module Name =
-  AddListUtils
-    (LI.ListName)
-    (struct
-      open LI.Name
-      type t = name
-      type view = name_view
-      let eq = eq
-      let str = to_string
+module Name = struct
+  include LI.Name
+  module List = LI.ListName
+  type view =
+    | Anon
+    | Str of name * string
+    | Idx of name * uint
+  let view n =
+    if      is_str n then Str(get_prefix n, get_str n)
+    else if is_idx n then Idx(get_prefix n, get_idx n)
+    else (assert (is_anon n); Anon)
+  let mk_str s = mk_anon () |> append_str ~str:s
+  let mk_idx s i = mk_str s |> append_idx ~idx:i
+end
 
-      let view n =
-        if      is_str n then NStr (get_str n)
-        else if is_idx n then NIdx (get_str (get_prefix n), get_idx n)
-        else NAnon
-
-      let mk v =
-        match v with
-        | NAnon     -> mk_anon ()
-        | NStr s    -> mk_str ~str:s @@ mk_anon ()
-        | NIdx(s,i) -> mk_idx ~idx:i @@ mk_str ~str:s @@ mk_anon ()
-    end)
-
-let (!:) s = Name.mk @@ NStr s
-
-(* ** Option *)
 (* ** Universe *)
 
-module UnivNoList = struct
-  include LI.Univ
-  let str = to_string
-  type t = univ
-  type view = int
-  let zero = mk_zero ()
-  let one = mk_succ zero
-  let rec mk = function
-    | i when i <= 0 -> zero
-    | i -> mk @@ i-1
-  let rec view = function
-    | u when u = zero -> 0
-    | u when u = one  -> 1
-    | _ -> failwith "Not implemented"
-end
 module Univ = struct
-  include AddListUtils
-            (LI.ListUniv)
-            (UnivNoList)
-  open UnivNoList
-  let zero,one = zero,one
+  include LI.Univ
+  module List = LI.ListUniv
+  type view =
+    | Zero
+      (* The zero universe. *)
+    | Succ of univ
+      (* Successor of the previous universe. *)
+    | Max of univ * univ
+      (* Maximum of two universes. *)
+    | Imax of univ * univ
+      (* [IMax(x,y)] denotes [y] if [y] is universe zero, otherwise [Max x y] *)
+    | Param of name
+      (* Universe parameter with the given name. *)
+    | Global of name
+      (* Reference to a global universe. *)
+    | Meta of name
+      (* Meta variable with the given name. *)
+
+  let view u = LI.(
+    match kind u with
+    | Univ_Zero   -> Zero
+    | Univ_Succ   -> Succ (get_pred u)
+    | Univ_Max    -> Max(get_max_lhs u,get_max_rhs u)
+    | Univ_Imax   -> Imax(get_max_lhs u,get_max_rhs u)
+    | Univ_Param  -> Param(get_name u)
+    | Univ_Global -> Global(get_name u)
+    | Univ_Meta   -> Meta(get_name u))
 end
 
+(* ** Local const *)
+
+module LocalConst = struct
+  open LI.Expr
+  type t = LocalConst of expr
+  let to_expr (LocalConst e) = e
+  let mk_local_const n t = LocalConst(mk_local n t)
+  let mk_local_const_ext bk n pn t =
+    LocalConst(LI.Expr.mk_local_ext n pn t bk)
+  let binder_kind lc = to_expr lc |> get_local_binder_kind
+  let name lc = to_expr lc |> get_mlocal_name
+  let ty lc = to_expr lc |> get_mlocal_type
+  let pp_name lc = to_expr lc |> get_local_pp_name
+end
 
 (* ** Expression *)
-type expr_view =
-    | ExprVar      of uint
-    | ExprSort     of univ
-    | ExprConst    of name * list_univ (* Univ.expr_view list *)
-    | ExprApp      of expr_view * expr_view
-    | ExprLambda   of name * expr * expr_view * binder_kind
-    | ExprPi       of name * expr * expr_view * binder_kind
-    | ExprMacro    of macro_def * (expr_view list)
-    | ExprLocal    of name * expr_view
-    | ExprLocalExt of name * name * expr_view * binder_kind
-    | ExprMetavar  of name * expr_view
-    | ExprRaw      of expr
-
-module ExprNoList = struct
-  include LI.Expr
-  type t = expr
-  type view = expr_view
-  type ty = t
-  let mk =
-    let rec (!) = function
-      | ExprVar ui                   -> mk_var ui
-      | ExprSort u                   -> mk_sort u
-      | ExprConst (n, us)            -> mk_const n us
-      | ExprApp (f, x)               -> mk_app !f !x
-      | ExprLambda (n, ty, value, k) -> mk_lambda n ~ty !value k
-      | ExprPi (n, ty, value, k)     -> mk_pi n ~ty !value k
-      | ExprMacro (md, es)           -> mk_macro md (LI.ListExpr.of_list @@ List.map (!) es)
-      | ExprLocal (n, e)             -> mk_local n !e
-      | ExprLocalExt (n1, n2, e, k)  -> mk_local_ext n1 n2 !e k
-      | ExprMetavar (n, e)           -> mk_metavar n !e
-      | ExprRaw le                   -> le
-    in (!)
-  let view le = ExprRaw le (* TODO - FIXME - DO IT PROPERLY !! *)
-  let str = to_string
-  let pp ?envios e =
-    match envios with
-    | Some (env,ios) -> to_pp_string env ios e
-    | None -> str e
-
-  let bruijn = mk_var @< Unsigned.UInt.of_int
-  let mk_forall (s, ty) ?(binder_kind=LI.Binder_default) (f : expr -> view) =
-    ExprPi (!:s, ty, f @@ bruijn 0, binder_kind)
-  (* mk_pi !:s ~ty (f @@ bruijn 0) binder_kind *)
-
-  let ty_prop = mk_sort Univ.zero
-  let ty_type = mk_sort Univ.one
-  let (|:) s ty = s,ty
-end
 
 module Expr = struct
-  include AddListUtils (LI.ListExpr) (ExprNoList)
-  type ty = ExprNoList.ty
-  open ExprNoList
-  let pp, mk_forall, ty_prop, ty_type, (|:) = (pp, mk_forall, ty_prop, ty_type, (|:))
+  include LI.Expr
+  module List = LI.ListExpr
+  type local_const = LocalConst of expr (* FIXME: add functions for local_const *)
+  type view =
+    | Var    of uint
+    | Sort   of univ
+    | Const  of name * list_univ
+    | Local  of LocalConst.t
+    | Meta   of name * expr
+    | App    of expr * expr
+    | Lambda of binder_kind * name * expr * expr
+    | Pi     of binder_kind * name * expr * expr
+    | Macro  of macro_def * list_expr
+    | Let    of unit (* FIXME *)
+
+  let view e = LI.(
+    match get_kind e with
+    | Expr_var    -> Var(get_var_idx e)
+    | Expr_sort   -> Sort(get_sort_univ e)
+    | Expr_const  -> Const(get_const_name e, get_const_univ e)
+    | Expr_local  -> Local(LocalConst.LocalConst(e))
+    | Expr_meta   -> Meta(get_mlocal_name e, get_mlocal_type e)
+    | Expr_app    -> App(get_app_fun e, get_app_arg e)
+    | Expr_lambda -> Lambda(get_binding_binder_kind e,
+                            get_binding_name e,
+                            get_binding_domain e,
+                            get_binding_body e)
+    | Expr_pi     -> Pi(get_binding_binder_kind e,
+                        get_binding_name e,
+                        get_binding_domain e,
+                        get_binding_body e)
+    | Expr_let    -> Let() (* FIXME: there might be missing functions in the lean api *)
+    | Expr_macro  -> Macro(get_macro_def e, get_macro_args e))
 end
+
+(* ** Option *)
 
 (* ** IO state *)
 
+(*
 module Ios = struct
   open LI.Ios
   let mk ?(options= LI.Options.mk_empty ()) () =
@@ -197,7 +156,7 @@ end
 (* ** Parser *)
 (* ** Type checker *)
 (* ** Declaration *)
-(* ** Declaration *)
+
 type decl_view =
   | DeclAxiom of Name.t * Expr.ty
   | DeclConst of Name.t * Expr.ty
@@ -208,8 +167,8 @@ module Decl = struct
   let decl_kind_to_string = function
     | LI.Decl_axiom -> "axiom"
     | LI.Decl_const -> "constant"
-    | LI.Decl_def -> "definition"
-    | LI.Decl_thm -> "theorem"
+    | LI.Decl_def   -> "definition"
+    | LI.Decl_thm   -> "theorem"
 
   let has_value decl =
     match LI.Decl.get_kind decl with
@@ -247,12 +206,15 @@ module Decl = struct
 end
 
 (* ** EnvParser *)
-
+*)
+(*
 module type LeanFiles = sig
   val _olean : string list
   val _lean : string list
 end
+*)
 
+(*
 module GetExprParser (LF : LeanFiles) = struct
   type t = LI.expr
   type _1ary = t -> t
@@ -279,7 +241,6 @@ module GetExprParser (LF : LeanFiles) = struct
       LF._lean
 
   let to_pp_string = LI.Expr.to_pp_string env !ios
-
 
   let get_type =
     let ty_chkr = LI.TypeChecker.mk env in
@@ -371,3 +332,4 @@ module GetExprParser (LF : LeanFiles) = struct
     | _ -> ()
 
 end
+*)

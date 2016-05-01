@@ -1,5 +1,7 @@
 (* * Lean internals *)
+
 open Ctypes
+open LeanUtil
 
 module B = Ffi_bindings.Bindings(Ffi_generated)
 module LeanT = Ffi_bindings.Types(Ffi_generated_types)
@@ -110,18 +112,6 @@ let to_univ_kind c =
     else assert false
   )
 
-let from_univ_kind uk =
-  LeanT.Univ_kind.(
-    match uk with
-    | Univ_Zero   -> univ_zero
-    | Univ_Succ   -> univ_succ
-    | Univ_Max    -> univ_max
-    | Univ_Imax   -> univ_imax
-    | Univ_Param  -> univ_param
-    | Univ_Global -> univ_global
-    | Univ_Meta   -> univ_meta
-  )
-
 (* *** Expression kinds *)
 
 type expr_kind =
@@ -149,21 +139,6 @@ let to_expr_kind c =
     else if c = expr_let    then Expr_let
     else if c = expr_macro  then Expr_macro
     else assert false
-  )
-
-let from_expr_kind ek =
-  LeanT.Expr_kind.(
-    match ek with
-    | Expr_var    -> expr_var
-    | Expr_sort   -> expr_sort
-    | Expr_const  -> expr_const
-    | Expr_local  -> expr_local
-    | Expr_meta   -> expr_meta
-    | Expr_app    -> expr_app
-    | Expr_lambda -> expr_lambda
-    | Expr_pi     -> expr_pi
-    | Expr_let    -> expr_let
-    | Expr_macro  -> expr_macro
   )
 
 (* *** Binder kinds *)
@@ -207,15 +182,6 @@ let to_decl_kind c =
     else if c = decl_def   then Decl_def
     else if c = decl_thm   then Decl_thm
     else assert false
-  )
-
-let from_decl_kind dk =
-  LeanT.Decl_kind.(
-    match dk with
-    | Decl_const -> decl_const
-    | Decl_axiom -> decl_axiom
-    | Decl_def   -> decl_def
-    | Decl_thm   -> decl_thm
   )
 
 (* ** Finalizers *)
@@ -321,52 +287,72 @@ let with_bool_and_cnstr_seq = with_pair_wrapper
 
 module type ListBase = sig
   type t
-  type list_t
-
-  val mk_nil  : unit -> list_t
-  val mk_cons : t -> list_t -> list_t
-
-  val is_cons : list_t -> bool
-  val eq      : list_t -> list_t -> bool
-  val head    : list_t -> t
-  val tail    : list_t -> list_t
+  type elem_t
+  
+  val mk_nil  : unit -> t
+  val mk_cons : elem_t -> t -> t
+  val head    : t -> elem_t
+  val tail    : t -> t
+  val is_cons : t -> bool
+  val eq      : t -> t -> bool
 end
 
 module type List = sig
   include ListBase
-
-  val to_list : list_t -> t list
-  val of_list : t list -> list_t
-
-  val ( @: ) : t -> list_t -> list_t
-  val ( ! ) : t -> list_t
+  type view =
+      | Nil
+      | Cons of elem_t * t
+  val view    : t -> view
+  val to_list : t -> elem_t list
+  val of_list : elem_t list -> t
 end
 
-module ListMake (X : ListBase) = struct
-  include X
+module ListMake (LB : ListBase) = struct
+  include LB
 
-  let (@:) = mk_cons
-  let (!) x = x @: (mk_nil ())
+  type view =
+      | Nil
+      | Cons of elem_t * t
+  let view l =
+    if is_cons l then Cons(head l, tail l)
+    else Nil
 
-  let rec to_list = function
-    | l when is_cons l -> (head l) :: (to_list @@ tail l)
-    | _ -> []
+  let to_list l =
+    let rec go acc l =
+      if is_cons l
+      then go ((head l)::acc) (tail l)
+      else List.rev acc
+    in
+    go [] l
 
-  let rec of_list = function
-    | x :: xs -> mk_cons x (of_list xs)
-    | _ -> mk_nil ()
+  let of_list xs =
+    let rec go acc xs =
+      match xs with
+      | x::xs -> go (mk_cons x acc) xs
+      | []    -> acc
+    in
+    go (mk_nil ()) (List.rev xs)
+end
+
+(* ** Modules for pointer conversion *)
+
+module type UnsafeVoidp = sig
+  type t
+  val unsafe_from_voidp : unit ptr -> t
+  val unsafe_to_voidp   : t -> unit ptr
 end
 
 (* ** Name *)
 
 module Name = struct
+  include (B.Name : UnsafeVoidp with type t = name)
   let mk_anon () = with_name B.name_mk_anonymous
-  let mk_str n ~str = with_name (B.name_mk_str n str)
-  let mk_idx n ~idx = with_name (fun n_p e_p ->
-    B.name_mk_idx n (uint_of_int idx) n_p e_p)
+  let append_str n ~str = with_name (B.name_mk_str n str)
+  let append_idx n ~idx = with_name (fun n_p e_p ->
+    B.name_mk_idx n idx n_p e_p)
 
   let get_prefix n = with_name   (B.name_get_prefix n)
-  let get_idx    n = with_uint   (B.name_get_idx n) |> uint_to_int (* FIXME: use uint here? *)
+  let get_idx    n = with_uint   (B.name_get_idx n)
   let get_str    n = with_string (B.name_get_str n)
   let to_string  n = with_string (B.name_to_string n)
 
@@ -378,20 +364,23 @@ module Name = struct
   let quick_lt n1 n2 = to_bool (B.name_quick_lt n1 n2)
 end
 
-module ListName = ListMake (struct
-  type t = name
-  type list_t = list_name
+module ListName = struct
+  module Base = struct
+    type elem_t = name
+    type t = list_name
 
-  let mk_nil  ()   = with_list_name B.list_name_mk_nil
-  let mk_cons n ln = with_list_name (B.list_name_mk_cons n ln)
+    let mk_nil  ()   = with_list_name B.list_name_mk_nil
+    let mk_cons n ln = with_list_name (B.list_name_mk_cons n ln)
 
-  let is_cons ln = to_bool (B.list_name_is_cons ln)
-  let eq ln1 ln2 = to_bool (B.list_name_eq ln1 ln2)
+    let is_cons ln = to_bool (B.list_name_is_cons ln)
+    let eq ln1 ln2 = to_bool (B.list_name_eq ln1 ln2)
 
-  let head ln = with_name (B.list_name_head ln)
-  let tail ln = with_list_name (B.list_name_tail ln)
-
-end)
+    let head ln = with_name (B.list_name_head ln)
+    let tail ln = with_list_name (B.list_name_tail ln)
+  end
+  include ListMake(Base)
+  include (B.List_name : UnsafeVoidp with type t := t)
+end
 
 (* ** Option *)
 
@@ -400,7 +389,7 @@ module Options = struct
 
   let join o1 o2 = with_options (B.options_join o1 o2)
 
-  let set_bool   o n b = with_options (fun o_p e_p -> B.options_set_bool o n (from_bool b) o_p e_p)
+  let set_bool   o n b = with_options (fun op ep -> B.options_set_bool o n (from_bool b) op ep)
   let set_int    o n i = with_options (B.options_set_int o n i)
   let set_uint   o n i = with_options (B.options_set_uint o n i)
   let set_double o n d = with_options (B.options_set_double o n d)
@@ -424,6 +413,7 @@ end
 (* ** Universe *)
 
 module Univ = struct
+  include (B.Univ : UnsafeVoidp with type t = univ)
   let mk_zero ()    = with_univ B.univ_mk_zero
   let mk_succ u     = with_univ (B.univ_mk_succ u)
   let mk_max  u1 u2 = with_univ (B.univ_mk_max u1 u2)
@@ -455,31 +445,36 @@ end
 
 (* ** List of universes *)
 
-module ListUniv = ListMake (struct
-  type t = univ
-  type list_t = list_univ
+module ListUniv = struct
+  module Base = struct
+    type elem_t = univ
+    type t = list_univ
 
-  let mk_nil ()    = with_list_univ B.list_univ_mk_nil
-  let mk_cons u lu = with_list_univ (B.list_univ_mk_cons u lu)
+    let mk_nil ()    = with_list_univ B.list_univ_mk_nil
+    let mk_cons u lu = with_list_univ (B.list_univ_mk_cons u lu)
 
-  let head lu = with_univ (B.list_univ_head lu)
-  let tail lu = with_list_univ (B.list_univ_tail lu)
+    let head lu = with_univ (B.list_univ_head lu)
+    let tail lu = with_list_univ (B.list_univ_tail lu)
 
-  let is_cons lu = to_bool (B.list_univ_is_cons lu)
+    let is_cons lu = to_bool (B.list_univ_is_cons lu)
 
-  let eq lu1 lu2 = with_bool (B.list_univ_eq lu1 lu2)
-end)
+    let eq lu1 lu2 = with_bool (B.list_univ_eq lu1 lu2)
+  end
+  include ListMake(Base)
+  include (B.List_univ : UnsafeVoidp with type t := t)
+end
 
 (* ** Expression *)
 
 module Expr = struct
+  include (B.Expr : UnsafeVoidp with type t = expr)
   let (!) = from_binder_kind
   let mk_var i                  = with_expr (B.expr_mk_var i)
   let mk_sort u                 = with_expr (B.expr_mk_sort u)
   let mk_const n lu             = with_expr (B.expr_mk_const n lu)
   let mk_app f a                = with_expr (B.expr_mk_app f a)
-  let mk_lambda n ~ty b k       = with_expr (B.expr_mk_lambda n ty b !k)
-  let mk_pi n ~ty b k           = with_expr (B.expr_mk_pi n ty b !k)
+  let mk_lambda k n ~ty b       = with_expr (B.expr_mk_lambda n ty b !k)
+  let mk_pi k n ~ty b           = with_expr (B.expr_mk_pi n ty b !k)
   let mk_macro m args           = with_expr (B.expr_mk_macro m args)
   let mk_local n t              = with_expr (B.expr_mk_local n t)
   let mk_local_ext n pp_n t k   = with_expr (B.expr_mk_local_ext n pp_n t !k)
@@ -515,26 +510,34 @@ module Expr = struct
   let to_pp_string env ios expr = with_string(B.expr_to_pp_string env ios expr)
 end
 
-module ListExpr = ListMake (struct
-  type t = expr
-  type list_t = list_expr
+module ListExpr = struct
+  module Base = struct
+    type elem_t = expr
+    type t = list_expr
 
-  let mk_nil ()    = with_list_expr B.list_expr_mk_nil
-  let mk_cons u lu = with_list_expr (B.list_expr_mk_cons u lu)
+    let mk_nil ()    = with_list_expr B.list_expr_mk_nil
+    let mk_cons u lu = with_list_expr (B.list_expr_mk_cons u lu)
 
-  let head lu = with_expr (B.list_expr_head lu)
-  let tail lu = with_list_expr (B.list_expr_tail lu)
+    let head lu = with_expr (B.list_expr_head lu)
+    let tail lu = with_list_expr (B.list_expr_tail lu)
 
-  let is_cons lu = B.list_expr_is_cons lu |> to_bool
+    let is_cons lu = B.list_expr_is_cons lu |> to_bool
 
-  let eq lu1 lu2 = with_bool (B.list_expr_eq lu1 lu2)
-end)
+    let eq lu1 lu2 = with_bool (B.list_expr_eq lu1 lu2)
+  end
+  include ListMake(Base)
+  include (B.List_expr : UnsafeVoidp with type t := t)
+end
 
 (* ** Environment *)
 
-module Env =  struct
+module Env = struct
+  include (B.Env : UnsafeVoidp with type t = env)
+
   let mk_std i = with_env (B.env_mk_std i)
   let mk_hott i = with_env (B.env_mk_hott i)
+
+  let trust_high = uint_of_int LeanT.trust_high
 
   let add_univ e n = with_env (B.env_add_univ e n)
   let add e d = with_env (B.env_add e d)
@@ -595,28 +598,31 @@ end
 (* ** Inductive types *)
 
 module IndType = struct
- let mk n e list_expr = with_ind_type(B.ind_type_mk n e list_expr)
- let get_recursor_name n = with_name(B.get_recursor_name n)
+ let mk n e le = with_ind_type (B.ind_type_mk n e le)
+ let get_recursor_name n = with_name (B.get_recursor_name n)
 
- let get_name itype = with_name(B.ind_type_get_name itype)
- let get_type itype = with_expr(B.ind_type_get_type itype)
- let get_constructors itype = with_list_expr(B.ind_type_get_constructors itype)
+ let get_name         it = with_name      (B.ind_type_get_name it)
+ let get_type         it = with_expr      (B.ind_type_get_type it)
+ let get_constructors it = with_list_expr (B.ind_type_get_constructors it)
 end
 
 (* ** Inductive type list *)
 
-module ListIndType = ListMake (struct
-  type t = ind_type
-  type list_t = list_ind_type
-
-  let mk_nil () = with_list_ind_type(B.list_ind_type_mk_nil)
-  let mk_cons itype list_itype  = with_list_ind_type(B.list_ind_type_mk_cons itype list_itype)
-
-  let is_cons list_itype  = B.list_ind_type_is_cons list_itype |> to_bool
-  let eq list_itype list_itype  = with_bool(B.list_ind_type_eq list_itype list_itype)
-  let head list_itype  = with_ind_type(B.list_ind_type_head list_itype)
-  let tail list_itype  = with_list_ind_type(B.list_ind_type_tail list_itype)
-end)
+module ListIndType = struct
+  module Base = struct
+    type elem_t = ind_type
+    type t = list_ind_type
+ 
+    let mk_nil  ()     = with_list_ind_type (B.list_ind_type_mk_nil)
+    let mk_cons it lit = with_list_ind_type (B.list_ind_type_mk_cons it lit)
+    let is_cons lit    = B.list_ind_type_is_cons lit |> to_bool
+    let eq  lit1 lit2  = with_bool (B.list_ind_type_eq lit1 lit2)
+    let head lit       = with_ind_type      (B.list_ind_type_head lit)
+    let tail lit       = with_list_ind_type (B.list_ind_type_tail lit)
+  end
+  include ListMake(Base)
+  include (B.List_ind_type : UnsafeVoidp with type t := t)
+end
 
 (* ** Inductive declarations *)
 

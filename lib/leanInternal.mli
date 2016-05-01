@@ -1,5 +1,8 @@
 (* * Lean internals *)
+(** Lean internal module, see module {!module:Lean} for the public interface. *)
+
 open Ffi_bindings
+open LeanUtil
 
 (* ** Lean types *)
 
@@ -78,30 +81,61 @@ type decl_kind =
 (* ** Module for list types *)
 
 module type List = sig
+
+  (** List type. *)
   type t
-  type list_t
 
-  val mk_nil  : unit -> list_t
-  val mk_cons : t -> list_t -> list_t
+  (** Type of elements. *)
+  type elem_t
+  
+  (** Create empty list. *)
+  val mk_nil  : unit -> t
 
-  val is_cons : list_t -> bool
-  val eq      : list_t -> list_t -> bool
-  val head    : list_t -> t
-  val tail    : list_t -> list_t
+  (** Create list from head and tail. *)
+  val mk_cons : elem_t -> t -> t
 
-  val to_list : list_t -> t list
-  val of_list : t list -> list_t
+  (** Get head of list, raise exception if empty (FIXME: test this). *)
+  val head    : t -> elem_t
 
-  val ( @: )  : t -> list_t -> list_t
-  val ( ! )   : t -> list_t
+  (** Get tail of list, raise exception if empty (FIXME: test this). *)
+  val tail    : t -> t
+
+  (** Return [true] if list is not empty, *)
+  val is_cons : t -> bool
+  
+  (** Check equality of given lists. *)
+  val eq      : t -> t -> bool
+
+  (** View type for lists. *)
+  type view =
+      | Nil
+      | Cons of elem_t * t
+
+  (** Get view of given list. *)
+  val view    : t -> view
+
+  (** Convert Lean list into regular list. *)
+  val to_list : t -> elem_t list
+
+  (** Convert regular list into Lean list. *)
+  val of_list : elem_t list -> t
+end
+
+(* ** Module for pointer conversion *)
+
+module type UnsafeVoidp = sig
+  type t
+  val unsafe_from_voidp : unit Ctypes.ptr -> t
+  val unsafe_to_voidp   : t -> unit Ctypes.ptr
 end
 
 (* ** Names *)
 
 module Name : sig
+  include (UnsafeVoidp with type t = name)
   val mk_anon : unit -> name
-  val mk_str  : name -> str:string -> name
-  val mk_idx  : name -> idx:int -> name
+  val append_str : name -> str:string -> name
+  val append_idx : name -> idx:uint -> name
 
   val eq       : name -> name -> bool
   val lt       : name -> name -> bool
@@ -112,45 +146,20 @@ module Name : sig
   val is_idx  : name -> bool
 
   val get_prefix : name -> name
-  val get_idx    : name -> int
+  val get_idx    : name -> uint
   val get_str    : name -> string
   val to_string  : name -> string
 end
 
-module ListName : List with
-  type t = name and
-  type list_t = list_name
-
-(* ** Options *)
-
-module Options : sig
-  val mk_empty : unit -> options
-
-  val join : options -> options -> options
-
-  val set_bool   : options -> name -> bool -> options
-  val set_int    : options -> name -> int -> options
-  val set_uint   : options -> name -> Unsigned.uint -> options
-  val set_double : options -> name -> float -> options
-  val set_string : options -> name -> string -> options
-
-  val get_bool   : options -> name -> bool
-  val get_int    : options -> name -> int
-  val get_uint   : options -> name -> Unsigned.uint
-  val get_double : options -> name -> float
-  val get_string : options -> name -> string
-
-  val eq : options -> options -> bool
-
-  val empty    : options -> bool
-  val contains : options -> name -> bool
-
-  val to_string : options -> string
+module ListName : sig
+  include (UnsafeVoidp with type t := list_name)
+  include (List with type elem_t = name and type t = list_name)
 end
 
 (* ** Universe *)
 
 module Univ : sig
+  include (UnsafeVoidp with type t = univ)
   val mk_zero   : unit -> univ
   val mk_succ   : univ -> univ
   val mk_max    : univ -> univ -> univ
@@ -179,19 +188,21 @@ module Univ : sig
   val instantiate : univ -> list_name -> list_univ -> univ
 end
 
-module ListUniv : List with
-  type t = univ and
-  type list_t = list_univ
+module ListUniv : sig
+  include (UnsafeVoidp with type t := list_univ)
+  include (List with type elem_t = univ and type t = list_univ)
+end
 
 (* ** Expression *)
 
 module Expr : sig
+  include (UnsafeVoidp with type t = expr)
   val mk_var       : Unsigned.uint                          -> expr
   val mk_sort      : univ                                   -> expr
   val mk_const     : name -> list_univ                      -> expr
   val mk_app       : expr -> expr                           -> expr
-  val mk_lambda    : name -> ty:expr -> expr -> binder_kind -> expr
-  val mk_pi        : name -> ty:expr -> expr -> binder_kind -> expr
+  val mk_lambda    : binder_kind -> name -> ty:expr -> expr -> expr
+  val mk_pi        : binder_kind -> name -> ty:expr -> expr -> expr
   val mk_macro     : macro_def -> list_expr                 -> expr
   val mk_local     : name -> expr                           -> expr
   val mk_local_ext : name -> name -> expr -> binder_kind    -> expr
@@ -227,15 +238,46 @@ module Expr : sig
   val to_pp_string : env -> ios -> expr -> string
 end
 
-module ListExpr : List with
-  type t = expr and
-  type list_t = list_expr
+module ListExpr : sig
+  include (UnsafeVoidp with type t := list_expr)
+  include (List with type elem_t = expr and type t = list_expr)
+end
+
+(* ** Options *)
+
+module Options : sig
+  val mk_empty : unit -> options
+
+  val join : options -> options -> options
+
+  val set_bool   : options -> name -> bool -> options
+  val set_int    : options -> name -> int -> options
+  val set_uint   : options -> name -> Unsigned.uint -> options
+  val set_double : options -> name -> float -> options
+  val set_string : options -> name -> string -> options
+
+  val get_bool   : options -> name -> bool
+  val get_int    : options -> name -> int
+  val get_uint   : options -> name -> Unsigned.uint
+  val get_double : options -> name -> float
+  val get_string : options -> name -> string
+
+  val eq : options -> options -> bool
+
+  val empty    : options -> bool
+  val contains : options -> name -> bool
+
+  val to_string : options -> string
+end
 
 (* ** Environment *)
 
 module Env : sig
-  val mk_std         : Unsigned.uint -> env
-  val mk_hott        : Unsigned.uint -> env
+  include (UnsafeVoidp with type t = env)
+  val mk_std  : Unsigned.uint -> env
+  val mk_hott : Unsigned.uint -> env
+
+  val trust_high : uint
 
   val add_univ : env -> name -> env
   val add      : env -> cert_decl -> env
@@ -294,9 +336,10 @@ module IndType : sig
   val get_constructors  : ind_type -> list_expr
 end
 
-module ListIndType : List with
-  type t = ind_type and
-  type list_t = list_ind_type
+module ListIndType : sig
+  include (UnsafeVoidp with type t := list_ind_type)
+  include (List with type elem_t = ind_type and type t = list_ind_type)
+end
 
 (* ** Inductive declarations *)
 
