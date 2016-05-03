@@ -22,15 +22,6 @@ let unsafe_int_of_kind x =
 (* ** Pretty printing
  * ----------------------------------------------------------------------- *)
 
-let rec pp_list sep pp_elt f l =
-  match l with
-  | [] -> ()
-  | [e] -> pp_elt f e
-  | e::l -> F.fprintf f "%a%(%)%a" pp_elt e sep (pp_list sep pp_elt) l
-
-let pp_list_c pe = (pp_list "," pe)
-let pp_list_s = pp_list_c (fun fmt -> F.fprintf fmt "%s")
-
 let pp_opt pp fmt o =
   match o with
   | Some x -> pp fmt x
@@ -50,6 +41,16 @@ let pp_if c pp1 pp2 fmt x =
 
 let pp_pair pp1 pp2 fmt (a,b) =
   F.fprintf fmt "(%a,%a)" pp1 a pp2 b
+            
+let rec pp_list sep pp_elt f l =
+  match l with
+  | [] -> ()
+  | [e] -> pp_elt f e
+  | e::l -> F.fprintf f "%a%(%)%a" pp_elt e sep (pp_list sep pp_elt) l
+
+let pp_list_c pe = (pp_list "," pe)
+let pp_list_s = pp_list_c pp_string
+
 
 let fsprintf fmt =
   let buf  = Buffer.create 127 in
