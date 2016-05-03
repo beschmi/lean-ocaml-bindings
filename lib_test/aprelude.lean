@@ -130,10 +130,12 @@ constant Pr : Π{Ta : Ty}, Proc Ta Prop → Ta → ℝ
 abbreviation DFq   := Unif Fq
 abbreviation Dbool := Unif bool
 
-constant var : Π {t : Ty}, t → t
+-- ** Examples
 
-notation `~`v := var v
+constant var : Π {t : Ty}, string → t
+
+notation `~`v`:`t := @var t v
 
 constants (x y z : Fq)
 
-definition e1 := (g^(~x) * g^(~y + ~y)) 
+definition e1 := (grp.exp g (~"x":Fq) * grp.exp g ((~"y":Fq) + (~"y":Fq)))

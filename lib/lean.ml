@@ -157,7 +157,11 @@ module Expr = struct
     | Local(lc)        -> F.fprintf fmt "Local(%a)" pp_debug (LocalConst.to_expr lc)
     | Meta(n,t)        -> F.fprintf fmt "Meta(%a,%a)" Name.pp n pp_debug t
     | App(e1,e2)       -> F.fprintf fmt "App(%a,%a)" pp_debug e1 pp_debug e2
-    | Macro(md,el)     -> F.fprintf fmt "Macro(%s,)" (macro_def_to_string md)
+    | Macro(md,el)     ->
+      if List.is_nil el
+      then F.fprintf fmt "Macro(%s)" (macro_def_to_string md)
+      else F.fprintf fmt "Macro(%s,%a)" (macro_def_to_string md)
+             (pp_list "," pp_debug) (List.to_list el)
     | Let()            -> F.fprintf fmt "Let()"
     | Const(n,ul)      ->
       if (Univ.List.is_nil ul)
