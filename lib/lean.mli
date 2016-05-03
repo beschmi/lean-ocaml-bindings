@@ -67,6 +67,9 @@ module Name : sig
   (** Convert [name] to [string]. *)
   val to_string : name -> string
 
+  (** Pretty printer for names. *)
+  val pp : F.formatter -> name -> unit
+
   (** Unsafe pointer conversion for calling into OCaml from C. *)
   include (LeanInternal.UnsafeVoidp with type t := name)
 
@@ -140,6 +143,9 @@ module Univ : sig
 
   (** Convert [univ] into [view]. *)
   val view : univ -> view
+
+  (** Pretty printer for universes. *)
+  val pp : F.formatter -> univ -> unit
 
   (** Unsafe pointer conversion for calling into OCaml from C. *)
   include (LeanInternal.UnsafeVoidp with type t := univ)
@@ -235,6 +241,12 @@ module Expr : sig
 
   (** Convert [expr] to [string] with given [env] and [ios]. *)
   val to_pp_string : env -> ios -> expr -> string
+
+  (** Pretty printer for expressions corresponding to [view] *)
+  val pp_debug : F.formatter -> expr -> unit
+
+  (** Pretty printer for expressions. *)
+  val pp : F.formatter -> expr -> unit
 
   (** Convert [macro_def] to [string]. *)
   val macro_def_to_string : macro_def -> string

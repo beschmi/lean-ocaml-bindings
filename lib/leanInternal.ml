@@ -299,6 +299,7 @@ end
 
 module type List = sig
   include ListBase
+  val is_nil : t -> bool
   type view =
       | Nil
       | Cons of elem_t * t
@@ -309,6 +310,8 @@ end
 
 module ListMake (LB : ListBase) = struct
   include LB
+  
+  let is_nil l = not (is_cons l)
 
   type view =
       | Nil

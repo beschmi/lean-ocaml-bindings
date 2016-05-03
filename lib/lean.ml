@@ -4,6 +4,7 @@ open Ctypes
 open LeanUtil
 
 module LI = LeanInternal
+module F  = Format
 
 (* ** Types *)
 
@@ -26,6 +27,24 @@ type type_checker        = LI.type_checker
 type cnstr_seq           = LI.cnstr_seq
 type binder_kind         = LI.binder_kind
 
+(* ** Binder Kind *)
+
+module BinderKind = struct
+  type binder_kind = LI.binder_kind =
+                     | Binder_default
+                     | Binder_implicit
+                     | Binder_strict_implicit
+                     | Binder_inst_implicit
+
+  let to_string = function
+    | Binder_default         -> "default"
+    | Binder_implicit        -> "implicit"
+    | Binder_strict_implicit -> "strict_implicit"
+    | Binder_inst_implicit   -> "inst_implicit"
+
+  let pp fmt bk = pp_string fmt (to_string bk)
+end
+
 (* ** Name *)
 
 module Name = struct
@@ -41,6 +60,7 @@ module Name = struct
     else (assert (is_anon n); Anon)
   let mk_str s = mk_anon () |> append_str ~str:s
   let mk_idx s i = mk_str s |> append_idx ~idx:i
+  let pp fmt n = pp_string fmt @@ to_string n
 end
 
 (* ** Universe *)
@@ -73,6 +93,7 @@ module Univ = struct
     | Univ_Param  -> Param(get_name u)
     | Univ_Global -> Global(get_name u)
     | Univ_Meta   -> Meta(get_name u))
+  let pp fmt n = pp_string fmt @@ to_string n
 end
 
 (* ** Local const *)
@@ -126,37 +147,54 @@ module Expr = struct
                         get_binding_body e)
     | Expr_let    -> Let() (* FIXME: there might be missing functions in the lean api *)
     | Expr_macro  -> Macro(get_macro_def e, get_macro_args e))
+
+  let pp fmt e = pp_string fmt (to_string e)
+
+  let rec pp_debug fmt e =
+    match view e with
+    | Var(ui)          -> F.fprintf fmt "Var(%a)" pp_uint ui
+    | Sort(u)          -> F.fprintf fmt "Sort(%a)" Univ.pp u
+    | Local(lc)        -> F.fprintf fmt "Local(%a)" pp_debug (LocalConst.to_expr lc)
+    | Meta(n,t)        -> F.fprintf fmt "Meta(%a,%a)" Name.pp n pp_debug t
+    | App(e1,e2)       -> F.fprintf fmt "App(%a,%a)" pp_debug e1 pp_debug e2
+    | Macro(md,el)     -> F.fprintf fmt "Macro(%s,)" (macro_def_to_string md)
+    | Let()            -> F.fprintf fmt "Let()"
+    | Const(n,ul)      ->
+      if (Univ.List.is_nil ul)
+      then F.fprintf fmt "$%a)" Name.pp n
+      else F.fprintf fmt "Const(%a,%a)" Name.pp n (pp_list "," Univ.pp) (Univ.List.to_list ul)
+    | Lambda(bk,n,t,e) ->
+      F.fprintf fmt "Lambda(%a,%a,%a,%a)" BinderKind.pp bk Name.pp n pp_debug t pp_debug e
+    | Pi(bk,n,t,e)     ->
+      F.fprintf fmt "Pi(%a,%a,%a,%a)" BinderKind.pp bk Name.pp n pp_debug t pp_debug e
+
 end
 
 (* ** Option *)
 
+module Option = struct
+end
+
 (* ** IO state *)
 
-(*
-module Ios = struct
-  open LI.Ios
-  let mk ?(options= LI.Options.mk_empty ()) () =
-    mk_std options
+module IOS = struct
+
 end
 
 (* ** Environment *)
 
 module Env = struct
   open LI.Env
-  let mk ?(filenames = Name.list_mk []) ios =
-    let env = mk_std @@ Unsigned.UInt.of_int 1 in (* FIXME which uint here ? *)
-    let env = import env ios (Name.list_mk [NStr "init"]) in
-    let env = import env ios filenames in
-    env
 end
 
 (* ** Inductive types *)
+
 (* ** Inductive declarations *)
 (* ** Modules *)
 (* ** Parser *)
 (* ** Type checker *)
 (* ** Declaration *)
-
+(*
 type decl_view =
   | DeclAxiom of Name.t * Expr.ty
   | DeclConst of Name.t * Expr.ty
@@ -204,9 +242,9 @@ module Decl = struct
                  ~normalized:true (* FIXME : true or false ?? *) in
     LI.Decl.check env decl
 end
+*)
 
 (* ** EnvParser *)
-*)
 (*
 module type LeanFiles = sig
   val _olean : string list

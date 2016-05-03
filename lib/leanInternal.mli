@@ -106,6 +106,9 @@ module type List = sig
   (** Check equality of given lists. *)
   val eq      : t -> t -> bool
 
+  (** Return [true] if list is empty, *)
+  val is_nil : t -> bool
+
   (** View type for lists. *)
   type view =
       | Nil
