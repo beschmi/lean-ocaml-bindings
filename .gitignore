@@ -14,3 +14,13 @@ lib/liblean_stubs.clib
 lib_test/test_lean_api.c
 setup.data
 setup.ml
+_build/*
+bisect*
+coverage/*
+*.olean
+lean.docdir
+lean.odocl
+*.clean
+*.byte
+*.native
+setup.log
