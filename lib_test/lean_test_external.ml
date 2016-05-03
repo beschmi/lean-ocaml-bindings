@@ -118,6 +118,8 @@ let t_env =
   let module U = Lean.Univ in
   let module N = Lean.Name in
   let str = N.mk_str in
+  let ul_nil = U.List.mk_nil () in
+  let nl_nil = N.List.mk_nil () in
   
   let opt = O.mk_empty () in
   let ios = I.mk_buffered opt in
@@ -125,8 +127,21 @@ let t_env =
   let env = Ev.import env ios (N.List.of_list [str "init"]) in
   (* let env = Ev.import env ios (N.List.of_list [str "aprelude"])  in *)
   let (env,ios) = LI.Parse.file env ios "lib_test/aprelude.lean" in
-  let d   = Ev.get_decl env (str "e1") in
-  let e   = D.get_value d in
-  
-  F.printf "\ne = %a\n" E.pp_debug e;
-  F.printf "\ne = %a\n" E.pp e
+  let d  = Ev.get_decl env (str "e1") in
+  let e1 = D.get_value d in
+  (* mini-api *)
+  let cmul = E.mk_const (str "grp" |> N.append_str ~str:"mul") ul_nil in
+  let mk_mul a b = E.mk_app (E.mk_app cmul a) b in
+  let e2 = mk_mul e1 e1 in
+  let ty_G = E.mk_const (str "G") ul_nil in
+  let def =
+    D.mk_def_with env (str "e2") ~univ_params:nl_nil ~ty:ty_G ~value:e2 ~normalized:true
+  in
+  let cdef = D.check env def in
+  let env = Ev.add env cdef in
+
+  let d  = Ev.get_decl env (str "e2") in
+  let e2 = D.get_value d in
+
+  F.printf "\ne = %a\n" E.pp_debug e2;
+  F.printf "\ne = %a\n" E.pp e2
