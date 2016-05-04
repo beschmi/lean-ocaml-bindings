@@ -1,9 +1,0 @@
-#!/bin/sh
-
-trap "rm -f lean_check" EXIT
-(gcc stubgen/lean_check.c -lleanshared -o lean_check 2>/dev/null \
-    && ./lean_check 2>&1 >/dev/null) ||
-  (echo "Package needs lean headers and library to be installed on your system."; exit 1)
-
-# OASIS_START
-# OASIS_STOP
