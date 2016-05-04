@@ -24,7 +24,8 @@ type inductive_decl      = LeanInternal.ind_decl
 type type_checker        = LeanInternal.type_checker
 type cnstr_seq           = LeanInternal.cnstr_seq
 type binder_kind         = LeanInternal.binder_kind
-
+type lean_exc            = LeanInternal.lean_exc
+                             
 (** {1 Submodules } *)
 
 (* ** Name *)
@@ -273,6 +274,95 @@ module Expr : sig
   (** Lists of expressions. *)
   module List : (module type of LeanInternal.ListExpr)
 end  
+
+(* ** Declaration *)
+module Decl : sig
+  (* All optional args must go before last unnamed arg*)
+  (** Create an axiom *)
+  val mk_axiom : ?univ_params:list_name -> name -> ty:expr -> decl
+                                                
+  (** Create a constant *)
+  val mk_constant : ?univ_params:list_name -> name -> ty:expr -> decl
+                                                
+  (** Create a definition with an explicit definitional height*)
+  val mk_definition : ?univ_params:list_name -> 
+                      name ->
+                      ty:expr ->
+                      value:expr ->
+                      height:uint ->
+                      conv_opt:bool ->
+                      decl
+                        
+  (** Create a definition where the definitional height 
+is computed using information from the environment *)
+  val mk_definition_with : env ->
+                           ?univ_params:list_name ->
+                           name ->
+                           ty:expr ->
+                           value:expr ->
+                           conv_opt:bool ->
+                           decl
+                             
+  (** Create a theorem with an explicit definitional height*)
+  val mk_theorem : ?univ_params:list_name ->
+                   name ->
+                   ty:expr ->
+                   proof:expr ->
+                   height:uint ->
+                   decl
+
+  (** Create a theorem where the definitional height 
+is computed using information from the environment *)
+  val mk_theorem_with : env ->
+                        ?univ_params:list_name ->
+                        name ->
+                        ty:expr ->
+                        proof:expr ->
+                        decl
+
+  (** Get the name of a declaration. *)
+  val name : decl -> name
+                       
+  (** Get the list of universe params for a declaration. *)
+  val univ_params : decl -> list_name
+
+  (** Get the type of a declaration. *)
+  val ty : decl -> expr
+                                
+  type view =
+    (** A constant *)
+    | Const 
+    (** An axiom *)
+    | Axiom 
+    (** A definition with the associated value, definitional height, and
+     whether to lazy unfold it *)
+    | Def   of expr * uint * bool
+    (** A theorem with the associated value and definitional height *)
+    | Thm   of expr * uint
+                        
+  (** Convert [decl] into [view]. *)
+  val view : decl -> view
+
+  (** Create a certified declaration (may throw a LeanKernelException) *)
+  val certify : env -> decl -> cert_decl
+                                 
+  (** Create a certified declaration (with exception catching) 
+   to pattern-match its output.
+   Reminder: LeanUtil> type ('a, 'b) trycatch = Success of 'a | Fail of 'b *)
+  val try_certify : env -> decl -> (cert_decl, string) trycatch
+                                 
+  (** Unsafe pointer conversion for calling into OCaml from C. *)
+  include (LeanInternal.UnsafeVoidp with type t := decl)
+            
+  (** Convert [decl] to [string] (with pretty_printing if given the opt pp arg) *)
+  val to_string : ?pp: env * ios -> decl -> string
+
+  (** Pretty printer for declarations corresponding to [view] *)
+  val pp_debug : F.formatter -> decl -> unit
+
+  (** Pretty printer for declarations. *)
+  val pp : F.formatter -> decl -> unit
+end
 
 (* ** Option *)
 

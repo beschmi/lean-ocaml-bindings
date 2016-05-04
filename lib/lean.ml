@@ -26,7 +26,8 @@ type inductive_decl      = LI.ind_decl
 type type_checker        = LI.type_checker
 type cnstr_seq           = LI.cnstr_seq
 type binder_kind         = LI.binder_kind
-
+type lean_exc            = LI.lean_exc
+                             
 (* ** Binder Kind *)
 
 module BinderKind = struct
@@ -174,6 +175,83 @@ module Expr = struct
 
 end
 
+(* ** Declaration *)
+module Decl = struct
+  include LI.Decl
+
+  let mk_axiom    ?(univ_params = Name.List.mk_nil ()) = mk_axiom    ~univ_params
+  let mk_constant ?(univ_params = Name.List.mk_nil ()) = mk_const    ~univ_params
+  let mk_definition ?(univ_params = Name.List.mk_nil ()) =
+    mk_def ~univ_params                        
+  let mk_definition_with env ?(univ_params = Name.List.mk_nil ()) =
+    mk_def_with env ~univ_params
+  let mk_theorem ?(univ_params = Name.List.mk_nil ()) n ~ty ~proof =
+    mk_thm n ~univ_params ~ty ~value:proof
+  let mk_theorem_with env ?(univ_params = Name.List.mk_nil ()) n ~ty ~proof =
+    mk_thm_with env n ~univ_params ~ty ~value:proof
+
+  let name = get_name
+  let univ_params  = get_univ_params
+  let ty = get_type
+                                
+  type view =
+    | Const 
+    | Axiom 
+    | Def   of expr * uint * bool
+    | Thm   of expr * uint
+                        
+  let view decl =
+    match get_kind decl with
+    | LI.Decl_axiom -> Axiom
+    | LI.Decl_const -> Const
+    | LI.Decl_def   -> Def(get_value decl, get_height decl, get_conv_opt decl)
+    | LI.Decl_thm   -> Thm(get_value decl, get_height decl)
+
+  let certify = check
+  let try_certify env decl =
+    try Success(certify env decl) with
+    | LI.Lean_exception(LI.Kernel_Exception, s) -> Fail s
+
+  let _kind_str decl =
+    match view decl with
+    | Axiom -> "axiom"
+    | Const -> "constant"
+    | Def _ -> "definition"
+    | Thm _ -> "theorem"
+
+  let get_opt_value decl = match view decl with
+    | Def(e,_,_) | Thm(e,_) -> Some e
+    | _ -> None
+
+  let _expr_to_string ?pp e =
+    match pp with
+      | None -> Expr.to_string e
+      | Some(env,ios) -> Expr.to_pp_string env ios e
+
+  let opt_value_to_string ?pp decl =
+    match get_opt_value decl with
+    | Some e -> ((^) " := ") @@ _expr_to_string ?pp e
+    | None -> ""
+
+  let to_string ?pp decl =
+    (_kind_str decl) ^ " " ^
+      (name decl |> Name.get_str) ^ " : " ^
+        (ty decl |> _expr_to_string ?pp) ^
+          (opt_value_to_string ?pp decl)
+
+  (** Pretty printer for declarations corresponding to [view] *)
+  let pp_debug fmt decl =
+    match view decl with
+    | Axiom -> F.fprintf fmt "Axiom"
+    | Const -> F.fprintf fmt "Const"
+    | Def (v, i, b) -> F.fprintf fmt "Def(%a, %a, %B)" Expr.pp v pp_uint i b 
+    | Thm (v, i) -> F.fprintf fmt "Thm(%a, %a)" Expr.pp v pp_uint i
+
+  (** Pretty printer for declarations. *)
+  let pp fmt decl = pp_string fmt @@ to_string decl
+end
+
+                
 (* ** Option *)
 
 module Option = struct

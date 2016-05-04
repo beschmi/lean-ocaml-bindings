@@ -25,6 +25,7 @@ type list_ind_type = B.List_ind_type.t
 type ind_decl      = B.Ind_decl.t
 type type_checker  = B.Type_checker.t
 type cnstr_seq     = B.Cnstr_seq.t
+type lean_exc      = B.Exception.t
 
 (* ** Strings returned by Lean *)
 
@@ -671,16 +672,18 @@ end
 (* ** Declarations *)
 
 module Decl = struct
+  include (B.Decl : UnsafeVoidp with type t = decl)
+            
   let (!) = from_bool
 
   let mk_axiom n ~univ_params ~ty = with_decl (B.decl_mk_axiom n univ_params ty)
   let mk_const n ~univ_params ~ty = with_decl (B.decl_mk_const n univ_params ty)
 
-  let mk_def n ~univ_params ~ty ~value ~height ~normalized =
-    with_decl (B.decl_mk_def n univ_params ty value height !normalized)
+  let mk_def n ~univ_params ~ty ~value ~height ~conv_opt =
+    with_decl (B.decl_mk_def n univ_params ty value height !conv_opt)
 
-  let mk_def_with env n ~univ_params ~ty ~value ~normalized =
-    with_decl (B.decl_mk_def_with env n univ_params ty value !normalized)
+  let mk_def_with env n ~univ_params ~ty ~value ~conv_opt =
+    with_decl (B.decl_mk_def_with env n univ_params ty value !conv_opt)
 
   let mk_thm n ~univ_params ~ty ~value ~height =
     with_decl (B.decl_mk_thm n univ_params ty value height)

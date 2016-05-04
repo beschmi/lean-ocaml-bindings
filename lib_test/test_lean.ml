@@ -87,6 +87,12 @@ let t_internal_list_name =
   "lean_list_name: *" >:: fun () ->
   let open LI.Name in
   let open LI.ListName in
+  let is_cons l =
+    not (view l = Nil) in
+  let head l = match view l with
+    | Cons(hd, _) -> hd | _ -> assert false in
+  let tail l = match view l with
+    | Cons(_,tl) -> tl | _ -> assert false in
   let lnil = mk_nil () in
   let na =
     mk_anon ()

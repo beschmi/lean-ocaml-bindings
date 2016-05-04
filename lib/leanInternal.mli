@@ -23,7 +23,7 @@ type list_ind_type
 type ind_decl
 type type_checker
 type cnstr_seq
-
+type lean_exc
 (* ** Exception *)
 
 type exc_kind =
@@ -37,6 +37,8 @@ type exc_kind =
   | Parser_Exception
   | Other_Exception
 
+exception Lean_exception of exc_kind * string
+                                         
 (* ** Universe kinds *)
 
 type univ_kind =
@@ -383,13 +385,14 @@ end
 (* ** Declarations *)
 
 module Decl : sig
+  include (UnsafeVoidp with type t = decl)
   val mk_axiom : name -> univ_params:list_name -> ty:expr -> decl
   val mk_const : name -> univ_params:list_name -> ty:expr -> decl
   val mk_def   : name -> univ_params:list_name -> ty:expr -> value:expr
-                 -> height:Unsigned.uint -> normalized:bool -> decl
+                 -> height:Unsigned.uint -> conv_opt:bool -> decl
 
   val mk_def_with : env -> name -> univ_params:list_name -> ty:expr -> value:expr
-                    -> normalized:bool -> decl
+                    -> conv_opt:bool -> decl
 
   val mk_thm      : name -> univ_params:list_name -> ty:expr -> value:expr
                     -> height:Unsigned.uint -> decl

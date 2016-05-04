@@ -135,7 +135,7 @@ let t_env =
   let e2 = mk_mul e1 e1 in
   let ty_G = E.mk_const (str "G") ul_nil in
   let def =
-    D.mk_def_with env (str "e2") ~univ_params:nl_nil ~ty:ty_G ~value:e2 ~normalized:true
+    D.mk_def_with env (str "e2") ~univ_params:nl_nil ~ty:ty_G ~value:e2 ~conv_opt:true
   in
   let cdef = D.check env def in
   let env = Ev.add env cdef in
