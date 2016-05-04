@@ -298,8 +298,14 @@ module type ListBase = sig
 end
 
 module type List = sig
-  include ListBase
-  val is_nil : t -> bool
+  (*include ListBase
+  val is_nil : t -> bool*)
+  type t
+  type elem_t         
+  val mk_nil  : unit -> t
+  val mk_cons : elem_t -> t -> t
+  val eq      : t -> t -> bool
+                                 
   type view =
       | Nil
       | Cons of elem_t * t

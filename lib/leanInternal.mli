@@ -94,20 +94,20 @@ module type List = sig
   (** Create list from head and tail. *)
   val mk_cons : elem_t -> t -> t
 
-  (** Get head of list, raise exception if empty (FIXME: test this). *)
+  (*(** Get head of list, raise exception if empty (FIXME: test this). *)
   val head    : t -> elem_t
 
   (** Get tail of list, raise exception if empty (FIXME: test this). *)
   val tail    : t -> t
 
   (** Return [true] if list is not empty, *)
-  val is_cons : t -> bool
+  val is_cons : t -> bool*)
   
   (** Check equality of given lists. *)
   val eq      : t -> t -> bool
 
-  (** Return [true] if list is empty, *)
-  val is_nil : t -> bool
+  (*(** Return [true] if list is empty, *)
+  val is_nil : t -> bool*)
 
   (** View type for lists. *)
   type view =
