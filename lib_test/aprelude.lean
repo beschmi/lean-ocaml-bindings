@@ -138,4 +138,7 @@ notation `~`v`:`t := @var t v
 
 constants (x y z : Fq)
 
-definition e1 := (grp.exp g (~"x":Fq) * grp.exp g ((~"y":Fq) + (~"y":Fq)))
+definition g1 := grp.exp g (~"z":Fq)
+definition e1 := (grp.exp g1 (~"x":Fq)) * (grp.exp g ((~"y":Fq) + (~"y":Fq)))
+
+print e1

@@ -2,6 +2,7 @@ open OUnit
 open Lean_test_util
 open LeanUtil
 
+module L = Lean
 module F  = Format
 module LI = LeanInternal
 
@@ -108,6 +109,42 @@ let t_expr =
   (* FIXME: where to get a macrodef? *)
   ()
 
+let norm =
+  let module Lst = List in
+  let open L.Expr in
+  let (|=|) = eq in
+  let ul_nil = L.Univ.List.mk_nil () in
+  let (@.) s1 s2 =
+    mk_const (L.Name.mk_str s1 |> L.Name.append_str ~str:s2) ul_nil in
+  let (<@) = mk_app in
+  (* Syntactic sugar for Lean Argument feeding (left associative) *)
+  let as_2ary e x y = e <@ x <@ y                in
+  let gen           = "grp" @. "gen"             in
+  let dlog          = "grp" @. "dlog"            in
+  let exp           = "grp" @. "exp"             in  
+  let gexp s        = exp <@ gen <@ s            in
+  let fq_mul        = "fq" @. "mul"   |> as_2ary in
+  let one           = "fq" @. "one"              in
+  let rec go e = match view e with
+    | App(dlog', gen')
+         when dlog' |=| dlog && go gen' |=| gen -> one
+    | App(f,s) ->
+       let s' = go s in
+       (match view f with
+        | App(smul', x) when smul' |=| exp ->
+           let x' = go x in
+           gexp @@ if x' |=| gen then s' else fq_mul s' (dlog <@ x')
+        | _ -> mk_app (go f) s')
+    | Lambda(bk,n,ty,e1) -> mk_lambda bk n ~ty @@ go e1
+    | Pi(bk,n,ty,e1) -> mk_pi bk n ~ty @@ go e1
+    | Meta(n,e1) -> mk_metavar n @@ go e1
+    | Macro(md, es) ->
+       let es' = List.of_list @@ Lst.map go @@ List.to_list es in
+       mk_macro md es'
+    | _ -> e in
+  go
+        
+
 let t_env =
   "lean_env: *" >:: fun () ->
   let module E = Lean.Expr in
@@ -144,4 +181,6 @@ let t_env =
   let e2 = D.get_value d in
 
   F.printf "\ne = %a\n" E.pp_debug e2;
-  F.printf "\ne = %a\n" E.pp e2
+  F.printf "\ne = %a\n" E.pp e2;
+  F.printf "\ne1 = %a\n" pp_string (E.to_pp_string env ios e1);
+  F.printf "\nnorm(e1) = %a\n" pp_string (E.to_pp_string env ios (norm e1))

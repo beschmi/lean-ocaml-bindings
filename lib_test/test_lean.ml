@@ -2,7 +2,6 @@ open OUnit
 open Lean
 open LeanUtil
 open Lean_test_util
-
 module LI = LeanInternal
 module L  = Lean
 module F  = Format
@@ -375,6 +374,41 @@ module LeanEnv =
 
 (* * Test suite *)
 
+let norm =
+  let module Lst = List in
+  let open L.Expr in
+  let (|=|) = eq in
+  let ul_nil = L.Univ.List.mk_nil () in
+  let (@.) s1 s2 =
+    mk_const (L.Name.mk_str s1 |> L.Name.append_str ~str:s2) ul_nil in
+  let (<@) = mk_app in
+  (* Syntactic sugar for Lean Argument feeding (left associative) *)
+  let as_2ary e x y = e <@ x <@ y                in
+  let gen           = "grp" @. "one"             in
+  let dlog          = "grp" @. "dlog"            in
+  let smul          = "grp" @. "smul"            in  
+  let gexp s        = smul <@ s <@ gen           in
+  let fq_mul        = "fq" @. "mul"   |> as_2ary in
+  let one           = "fq" @. "one"              in
+  let rec go e = match view e with
+    | App(dlog', gen')
+         when dlog' |=| dlog && go gen' |=| gen -> one
+    | App(f,x) ->
+       let x' = go x in
+       (match view f with
+        | App(smul', s) when smul' |=| smul ->
+           let s' = go s in
+           gexp @@ if x' |=| gen then s' else fq_mul s' (dlog <@ x')
+        | _ -> mk_app (go f) x')
+    | Lambda(bk,n,ty,e1) -> mk_lambda bk n ~ty @@ go e1
+    | Pi(bk,n,ty,e1) -> mk_pi bk n ~ty @@ go e1
+    | Meta(n,e1) -> mk_metavar n @@ go e1
+    | Macro(md, es) ->
+       let es' = List.of_list @@ Lst.map go @@ List.to_list es in
+       mk_macro md es'
+    | _ -> e in
+  go
+    
 let _ =
   let suite = "lean" >::: [
     t_internal_name_anon;
