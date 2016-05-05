@@ -276,8 +276,10 @@ module Expr : sig
 end  
 
 (* ** Declaration *)
+
+(** Manipulating Lean declarations *)
 module Decl : sig
-  (* All optional args must go before last unnamed arg*)
+  (* Regarding the args order : all optional args must go before last unnamed arg*)
   (** Create an axiom *)
   val mk_axiom : ?univ_params:list_name -> name -> ty:expr -> decl
                                                 
@@ -363,7 +365,78 @@ is computed using information from the environment *)
   (** Pretty printer for declarations. *)
   val pp : F.formatter -> decl -> unit
 end
+                      
+(* ** Environment *)
 
+(** Manipulating Lean environments *)
+module Env : sig
+  type trust_level = uint
+
+  (** Trust level for all macros implemented in [Lean] *)
+  val trust_high : trust_level
+
+  (** Create an empty standard environment with the given trust level. 
+   The returned environment is not a descendant of any other environment. *)
+  val standard_env : trust_level -> env
+
+                                      
+  (** Create an empty hott environment with the given trust level. 
+   The returned environment is not a descendant of any other environment. *)
+  val hott_env : trust_level -> env
+
+  (** Return the trust level of the given environment *)
+  val trust_level : env -> trust_level
+
+  (** Returns [true] if all proofs of a proposition in [Prop] are equivalent *)
+  val is_proof_irrel : env -> bool
+                                
+  (** Returns whether [Prop] is impredicative in the environment *)
+  val is_impredicative : env -> bool
+
+  (** Returns [true] iff the environment contains a global universe with the given [name] *)
+  val contains_univ : env -> name -> bool
+
+  (** Add to the environment a new global universe with the given [name]
+  (throws a [Lean_exception] if the environment already contains such universe) 
+   The returned environment is a descendant of the input environemnt. *)
+  val add_univ : env -> name -> env
+                                  
+  (** Returns an environment containing a global universe with the given [name]
+  (even when it was already there)  
+   The returned environment is a descendant of the input environemnt. *)
+  val add_univ_ignore : env -> name -> env
+
+  (** Add to the environment the given certified declaration.
+   - Throws a [Lean_exception] if:
+     * the [env] is not a descendant of the one used to [certify] the [decl],
+     * the [env] already contains a declaration with the same [name] as the [cert_decl]
+   - The returned environment is a descendant of the input environment. *)
+  val add_cert_decl : env -> cert_decl -> env
+
+  (** Replace the axiom that has the name of the given [cert_decl] with that [cert_decl] 
+   - Throws a [Lean_exception] if:
+     * the [env] is not a descendant of the one used to [certify] the [decl],
+     * the [env] does not contain an axiom with the [name] of the [cert_decl]
+     * the [cert_decl] is not a [theorem]
+   - The returned environment is a descendant of the input environment. *)
+  val replace_axiom : env -> cert_decl -> env
+
+  (** Returns [true] iff the environment contains a declaration with the given [name] *)
+  val contains_decl : env -> name -> bool
+
+  (** Optional 'lookup' of a [decl] with the given [name] from the given [env] *)
+  val get_opt_decl : env -> name -> decl option
+
+  (** Returns [true] iff the first [env] is a descendant of the second [env] *)
+  val is_descendant : env -> env -> bool
+                                      
+  (** Syntaxic sugar: [env' <| env] returns [true] iff [env'] is a descendant of [env] *)
+  val (<|) : env -> env -> bool
+                             
+  (** Returns a new [env] with an empty "history"; it is a descendant of itself only *)
+  val forget : env -> env
+end
+               
 (* ** Option *)
 
 (* ** IO state *)

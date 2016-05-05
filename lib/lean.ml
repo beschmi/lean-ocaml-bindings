@@ -266,9 +266,32 @@ end
 (* ** Environment *)
 
 module Env = struct
-  open LI.Env
-end
+  include LI.Env
+         
+  type trust_level = uint
 
+  let standard_env = mk_std
+                                      
+  let hott_env = mk_hott
+
+  let is_proof_irrel = proof_irrel
+                                
+  let is_impredicative = impredicative                                  
+
+  let add_univ_ignore env name =
+    if contains_univ env name then env else add_univ env name
+
+  let add_cert_decl = add
+
+  let replace_axiom = replace
+
+  let get_opt_decl env name =
+    if contains_decl env name then Some (get_decl env name) else None
+                                      
+  let (<|) = is_descendant
+                             
+end
+               
 (* ** Inductive types *)
 
 (* ** Inductive declarations *)
