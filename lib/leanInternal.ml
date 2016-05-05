@@ -187,9 +187,14 @@ let to_decl_kind c =
 
 (* ** Finalizers *)
 
+let finalize_disabled = ref false
+
+let disable_finalize () =
+  finalize_disabled := true
+
 let deref_ptr finaliser e_p =
   let e = !@e_p in
-  Gc.finalise finaliser e;
+  if not !finalize_disabled then Gc.finalise finaliser e;
   e
 
 let deref_exception_ptr     = deref_ptr B.exception_del

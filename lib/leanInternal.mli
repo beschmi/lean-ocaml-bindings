@@ -80,6 +80,10 @@ type decl_kind =
   | Decl_def
   | Decl_thm
 
+(* ** Debugging *)
+
+val disable_finalize : unit -> unit
+
 (* ** Module for list types *)
 
 module type List = sig
