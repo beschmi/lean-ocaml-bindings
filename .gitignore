@@ -24,3 +24,4 @@ lean.odocl
 *.byte
 *.native
 setup.log
+test_lean_api

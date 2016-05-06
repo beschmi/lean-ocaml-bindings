@@ -166,8 +166,8 @@ module Expr = struct
     | Let()            -> F.fprintf fmt "Let()"
     | Const(n,ul)      ->
       if (Univ.List.view ul = Univ.List.Nil)
-      then F.fprintf fmt "$%a)" Name.pp n
-      else F.fprintf fmt "Const(%a,%a)" Name.pp n (pp_list "," Univ.pp) (Univ.List.to_list ul)
+      then F.fprintf fmt "$%a" Name.pp n
+      else F.fprintf fmt "Const(%a,[%a])" Name.pp n (pp_list "," Univ.pp) (Univ.List.to_list ul)
     | Lambda(bk,n,t,e) ->
       F.fprintf fmt "Lambda(%a,%a,%a,%a)" BinderKind.pp bk Name.pp n pp_debug t pp_debug e
     | Pi(bk,n,t,e)     ->
